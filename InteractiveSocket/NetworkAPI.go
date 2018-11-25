@@ -86,6 +86,7 @@ func FILE_CHK() (string,bool,*os.File) {
 	var strContent string
 	info, err := os.Stat("./WindowDATA.txt")
 	if os.IsNotExist(err){
+		fmt.Println("SocketSVR No WindowDATA FOUND")
 		newDATA, err := os.Create("./WindowDATA.txt")
 		if err != nil{
 			fmt.Println("SocketSVR Create File FAIL")
@@ -94,19 +95,21 @@ func FILE_CHK() (string,bool,*os.File) {
 		defer newDATA.Close()
 
 		return strContent,false,newDATA
-	} else {
+	} else if os.IsExist(err) {
+		fmt.Println("SocketSVR WindowDATA FOUND")
 		DATA, err := os.OpenFile("./",os.O_RDWR,0644)
 		if err != nil {
-			fmt.Println("SocketSVR Read File FAIL")
+			fmt.Println("SocketSVR open file FAILED")
 		}
 		defer DATA.Close()
 
 		content := make([]byte,info.Size())
 		n,err := DATA.Read(content)
 		if err != nil{
-			fmt.Println(fmt.Println("SocketSVR Read File FAIL"))
+			fmt.Println(fmt.Println("SocketSVR read file FAILED"))
 		}
 		strContent =string(content[:n])
+		fmt.Println("SocketSVR file ready")
 		return strContent,true,DATA
 	}
 
