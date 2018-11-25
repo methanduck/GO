@@ -3,10 +3,11 @@ package InteractiveSocket
 import (
 	"fmt"
 	"net"
+	"strings"
 	"os"
 )
 
-func afterConnected(Android net.Conn, Node *NodeData,file os.File)  {
+func afterConnected(Android net.Conn, Node *NodeData,file *os.File)  {
 	fmt.Println("afterconnected comes in")
 	flag := -3
 	var AndroidData *[]byte
@@ -81,36 +82,43 @@ func COMM_RECVMSG(Android net.Conn, Count int) (*[]byte,int) {
 	return &msg,len
 }
 
-func FILE_CHK() (string,bool,file *os.File) {
+func FILE_CHK() (string,bool,*os.File) {
+	var strContent string
 	info, err := os.Stat("./WindowDATA.txt")
 	if os.IsNotExist(err){
 		newDATA, err := os.Create("./WindowDATA.txt")
 		if err != nil{
 			fmt.Println("SocketSVR Create File FAIL")
-			return "",false,nil
+			return strContent,false,nil
 		}
-
 		defer newDATA.Close()
-		return "nil",false,newDATA
+
+		return strContent,false,newDATA
 	} else {
 		DATA, err := os.OpenFile("./",os.O_RDWR,0644)
 		if err != nil {
 			fmt.Println("SocketSVR Read File FAIL")
 		}
-
 		defer DATA.Close()
+
 		content := make([]byte,info.Size())
 		n,err := DATA.Read(content)
 		if err != nil{
 			fmt.Println(fmt.Println("SocketSVR Read File FAIL"))
 		}
-		return string(content),true,DATA
+		strContent =string(content[:n])
+		return strContent,true,DATA
 	}
 
 }
 
-func FILE_WRITE(data string,file os.File) bool {
-	file.Write([]byte(data))
+func FILE_WRITE(data string,file *os.File) bool {
+	_,err := file.Write([]byte(data))
+	if err != nil {
+		fmt.Println("ERR!! SocketSVR Couldn't wrote Data on the Drive")
+		return false
+	}
+	return true
 }
 
 func Start() int {
@@ -123,7 +131,7 @@ func Start() int {
 			tmpNode := new(NodeData)
 			tmpNode.HostName = splited[0]
 			tmpNode.AndroidIP = splited[1]
-			Node = &tmpNode
+			Node = tmpNode
 	}
 	//Start Socket Server
 	Android, err := net.Listen("tcp",":6866")
