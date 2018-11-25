@@ -5,7 +5,7 @@ import (
 	"net"
 	"strings"
 	"os"
-	"github.com/methanduck/GO/InteractiveSocket/Node.go"
+	"github.com/methanduck/GO/InteractiveSocket"
 )
 
 func afterConnected(Android net.Conn, Node *NodeData,file *os.File)  {
