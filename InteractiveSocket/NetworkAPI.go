@@ -21,10 +21,14 @@ func afterConnected(Android net.Conn, Node *NodeData)  {
 			case "HELLO":
 				if Node == nil{
 					fmt.Println("SocketSVR Received HELLO")
-					COMM_SENDMSG("Require HostName",Android)
+					_ := COMM_SENDMSG("Require HostName",Android)
+
 					AndroidData,length = COMM_RECVMSG(Android,0)
 					Node = new(NodeData)
 					Node.HostName = string((*AndroidData)[:length])
+					fmt.Println("SocketSVR Configured HOSTNAME : "+Node.HostName+")")
+				} else {
+					fmt.Println("SocketSVR Rejected HELLO (Cause : Already Configured HOSTNAME")
 				}
 			break
 
