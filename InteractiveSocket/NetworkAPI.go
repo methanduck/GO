@@ -9,18 +9,22 @@ import (
 func afterConnected(Android net.Conn, Node *NodeData)  {
 	flag := -3
 	var AndroidData *[]byte
-
+	var length int
 	for true {
-		AndroidData = COMM_RECVMSG(Android,0)
-
-			switch string(*AndroidData) {
+		AndroidData,length = COMM_RECVMSG(Android,0)
+		if AndroidData == nil {
+			return
+		}
+			switch string((*AndroidData)[:length]) {
 			case "HELLO":
 				if Node == nil{
+					fmt.Println("SocketSVR Received HELLO")
 					COMM_SENDMSG("Require HostName",Android)
-					AndroidData = COMM_RECVMSG(Android,0)
+					AndroidData,length = COMM_RECVMSG(Android,0)
 					Node = new(NodeData)
-					Node.HostName = string(*AndroidData)
+					Node.HostName = string(*AndroidData[:length])
 				}
+			break
 
 			case "BYE":
 				fmt.Println("SocketSVR Connection Closed (Cause : Client Request)")
@@ -43,49 +47,51 @@ func COMM_SENDMSG(msg string, Android net.Conn) string {
 	return "netOK"
 }
 
-func COMM_RECVMSG(Android net.Conn, Count int) (*[]byte) {
+func COMM_RECVMSG(Android net.Conn, Count int) (*[]byte,int) {
 	var msg []byte
 	count := Count
 
 	if count > 4{
 		fmt.Println("SocketSVR Retrying read MSG ABORTED (Cause : count out)")
-		return nil
+		return nil,-1
 	}
-	_,err := Android.Read(msg)
+	len,err := Android.Read(msg)
 	if err != nil {
 		var recover *[]byte
 		fmt.Println("SocketSVR Msg receive FAIL");
 		fmt.Println("SocketSVR Retrying read MSG")
-		recover = COMM_RECVMSG(Android,count)
+		recover,len = COMM_RECVMSG(Android,count)
 		if recover != nil {
-			return recover
+			return recover,len
 		}
 	}
-	return &msg
+	return &msg,len
 }
 
 
 
-func main() int {
+func Start() int {
 	var Node *NodeData
 
 	Android, err := net.Listen("tcp",":6866")
 	if err != nil {
 		fmt.Println("SocketSVR Open FAIL")
 		return 1
+	} else {
+		fmt.Println("SocketSVR Open Succedded")
 	}
+
 	defer Android.Close()
 
-	for true {
+	for  {
 		connect, err := Android.Accept()
 		if err != nil{
 			fmt.Println("SocketSVR TCP CONN FAIL")
+		} else {
+			fmt.Println("SocketSVR TCP CONN Succeeded")
+			go afterConnected(connect, Node)
 		}
 		defer connect.Close()
-
-		go afterConnected(connect, Node)
 	}
-
-
 	return 0
 }
