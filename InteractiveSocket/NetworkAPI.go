@@ -5,6 +5,7 @@ import (
 	"net"
 	"strings"
 	"os"
+	"github.com/methanduck/GO/Node.go"
 )
 
 func afterConnected(Android net.Conn, Node *NodeData,file *os.File)  {
