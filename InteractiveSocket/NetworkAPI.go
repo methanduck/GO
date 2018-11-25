@@ -7,11 +7,13 @@ import (
 )
 
 func afterConnected(Android net.Conn, Node *NodeData)  {
+	fmt.Println("afterconnected comes in")
 	flag := -3
 	var AndroidData *[]byte
 	var length int
 	for true {
 		AndroidData,length = COMM_RECVMSG(Android,0)
+		fmt.Println(length)
 		if AndroidData == nil {
 			return
 		}
@@ -22,7 +24,7 @@ func afterConnected(Android net.Conn, Node *NodeData)  {
 					COMM_SENDMSG("Require HostName",Android)
 					AndroidData,length = COMM_RECVMSG(Android,0)
 					Node = new(NodeData)
-					Node.HostName = string(*AndroidData[:length])
+					Node.HostName = string((*AndroidData)[:length])
 				}
 			break
 
@@ -48,13 +50,14 @@ func COMM_SENDMSG(msg string, Android net.Conn) string {
 }
 
 func COMM_RECVMSG(Android net.Conn, Count int) (*[]byte,int) {
-	var msg []byte
+	msg := make([]byte,4096)
 	count := Count
 
 	if count > 4{
 		fmt.Println("SocketSVR Retrying read MSG ABORTED (Cause : count out)")
 		return nil,-1
 	}
+
 	len,err := Android.Read(msg)
 	if err != nil {
 		var recover *[]byte
@@ -80,7 +83,6 @@ func Start() int {
 	} else {
 		fmt.Println("SocketSVR Open Succedded")
 	}
-
 	defer Android.Close()
 
 	for  {
