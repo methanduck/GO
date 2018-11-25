@@ -21,7 +21,7 @@ func afterConnected(Android net.Conn, Node *NodeData)  {
 			case "HELLO":
 				if Node == nil{
 					fmt.Println("SocketSVR Received HELLO")
-					_ = COMM_SENDMSG("Require HostName",Android)
+					COMM_SENDMSG("Require HostName",Android)
 
 					AndroidData,length = COMM_RECVMSG(Android,0)
 					Node = new(NodeData)
