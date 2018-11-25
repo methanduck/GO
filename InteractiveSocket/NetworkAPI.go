@@ -3,17 +3,16 @@ package InteractiveSocket
 import (
 	"fmt"
 	"net"
-
+	"os"
 )
 
-func afterConnected(Android net.Conn, Node *NodeData)  {
+func afterConnected(Android net.Conn, Node *NodeData,file os.File)  {
 	fmt.Println("afterconnected comes in")
 	flag := -3
 	var AndroidData *[]byte
 	var length int
 	for true {
 		AndroidData,length = COMM_RECVMSG(Android,0)
-		fmt.Println(length)
 		if AndroidData == nil {
 			return
 		}
@@ -21,23 +20,30 @@ func afterConnected(Android net.Conn, Node *NodeData)  {
 			case "HELLO":
 				if Node == nil{
 					fmt.Println("SocketSVR Received HELLO")
-					COMM_SENDMSG("Require HostName",Android)
-
+					COMM_SENDMSG("SMARTWINDOW Require HostName",Android)
 					AndroidData,length = COMM_RECVMSG(Android,0)
 					Node = new(NodeData)
+					//setHOSTNAME on MainMemory
 					Node.HostName = string((*AndroidData)[:length])
-					fmt.Println("SocketSVR Configured HOSTNAME : "+Node.HostName+")")
+					//setHOSTNAME on Drive
+					result := FILE_WRITE(Node.HostName,file)
+					if result != false{
+						fmt.Println("SocketSVR Configured HOSTNAME : "+Node.HostName+")")
+					} else {
+						fmt.Println("ERR!! SocketSVR Configured HOSTNAME : " + Node.HostName + ") (Cause : Couldn't wrote data on the Drive) ")
+					}
 				} else {
-					fmt.Println("SocketSVR Rejected HELLO (Cause : Already Configured HOSTNAME")
+					fmt.Println("ERR!! SocketSVR Rejected HELLO (Cause : Already Configured HOSTNAME)")
 				}
 			break
 
 			case "BYE":
-				fmt.Println("SocketSVR Connection Closed (Cause : Client Request)")
+				fmt.Println("ERR!! SocketSVR Connection Closed (Cause : Client Request)")
 				flag = 0
 				break
 			}
 		if flag == 0{
+			fmt.Println("SocketSVR Connection Terminated")
 			break
 		}
 	}
@@ -58,7 +64,7 @@ func COMM_RECVMSG(Android net.Conn, Count int) (*[]byte,int) {
 	count := Count
 
 	if count > 4{
-		fmt.Println("SocketSVR Retrying read MSG ABORTED (Cause : count out)")
+		fmt.Println("SocketSVR Retrying read MSG ABORTED (Cause : COUNT OUT)")
 		return nil,-1
 	}
 
@@ -75,14 +81,54 @@ func COMM_RECVMSG(Android net.Conn, Count int) (*[]byte,int) {
 	return &msg,len
 }
 
+func FILE_CHK() (string,bool,file *os.File) {
+	info, err := os.Stat("./WindowDATA.txt")
+	if os.IsNotExist(err){
+		newDATA, err := os.Create("./WindowDATA.txt")
+		if err != nil{
+			fmt.Println("SocketSVR Create File FAIL")
+			return "",false,nil
+		}
 
+		defer newDATA.Close()
+		return "nil",false,newDATA
+	} else {
+		DATA, err := os.OpenFile("./",os.O_RDWR,0644)
+		if err != nil {
+			fmt.Println("SocketSVR Read File FAIL")
+		}
+
+		defer DATA.Close()
+		content := make([]byte,info.Size())
+		n,err := DATA.Read(content)
+		if err != nil{
+			fmt.Println(fmt.Println("SocketSVR Read File FAIL"))
+		}
+		return string(content),true,DATA
+	}
+
+}
+
+func FILE_WRITE(data string,file os.File) bool {
+	file.Write([]byte(data))
+}
 
 func Start() int {
+	//Load from local file
+	Data,result,file := FILE_CHK()
 	var Node *NodeData
-
+	//result != file is success of load local file
+	if result != false {
+			splited := strings.Split(Data,";")
+			tmpNode := new(NodeData)
+			tmpNode.HostName = splited[0]
+			tmpNode.AndroidIP = splited[1]
+			Node = &tmpNode
+	}
+	//Start Socket Server
 	Android, err := net.Listen("tcp",":6866")
 	if err != nil {
-		fmt.Println("SocketSVR Open FAIL")
+		fmt.Println("ERR!! SocketSVR Open FAIL")
 		return 1
 	} else {
 		fmt.Println("SocketSVR Open Succedded")
@@ -92,10 +138,11 @@ func Start() int {
 	for  {
 		connect, err := Android.Accept()
 		if err != nil{
-			fmt.Println("SocketSVR TCP CONN FAIL")
+			fmt.Println("ERR!! SocketSVR TCP CONN FAIL")
 		} else {
 			fmt.Println("SocketSVR TCP CONN Succeeded")
-			go afterConnected(connect, Node)
+			//start go routine
+			go afterConnected(connect, Node, file)
 		}
 		defer connect.Close()
 	}
