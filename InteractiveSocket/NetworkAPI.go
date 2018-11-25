@@ -7,36 +7,37 @@ import (
 	"bufio"
 	"io/ioutil"
 	"sync"
+	"os/exec"
 )
-
+//고정 변수
 const (
 	FILENAME = "WindowDATA.txt"
 	SVRLISTENINGPORT = "6866"
 )
-
-func afterConnected(Android net.Conn, Node *NodeData,file *os.File)  {
-	fmt.Println("afterconnected comes in")
-	flag := -3
+//TCP 연결 수립된 스레드
+func afterConnected(Android net.Conn, Node *NodeData,file *os.File,mutex *sync.Mutex)  {
+	flag := false
 	var AndroidData *[]byte
 	var length int
-	var mutex = new(sync.Mutex)
 
+	//양방향 통신 시작
 	for true {
 		AndroidData,length = COMM_RECVMSG(Android,0)
 		if AndroidData == nil {
 			return
 		}
 			switch string((*AndroidData)[:length]) {
+			// TODO : 양방향 소켓통신에서 사용될 기능 추가
 				case "HELLO":
 					if Node == nil{
 						fmt.Println("SocketSVR Received HELLO")
 						COMM_SENDMSG("SMARTWINDOW Require HostName",Android)
 						AndroidData,length = COMM_RECVMSG(Android,0)
 						Node = new(NodeData)
-						//setHOSTNAME on MainMemory
-						Node.HostName = string((*AndroidData)[:length])
-						//setHOSTNAME on Drive
 						mutex.Lock()
+						//메모리에 할당
+						Node.HostName = string((*AndroidData)[:length])
+						//디스크에 할당
 						FILE_WRITE(Node.HostName,file)
 						mutex.Unlock()
 						fmt.Println("SocketSVR Configured HOSTNAME : "+Node.HostName+")")
@@ -50,10 +51,10 @@ func afterConnected(Android net.Conn, Node *NodeData,file *os.File)  {
 				case "BYE":
 					fmt.Println("ERR!! SocketSVR Connection Closed (Cause : Client Request)")
 					COMM_SENDMSG("BYE!",Android)
-					flag = 0
+					flag = true
 				break
 			}
-		if flag == 0{
+		if flag{
 			fmt.Println("SocketSVR Connection Terminated")
 			break
 		}
@@ -122,12 +123,19 @@ func FILE_WRITE(data string,file *os.File) {
 	}
 }
 
-
+func EXEC_COMMAND(comm string) string {
+	out, err := exec.Command("/bin/bash","-c",comm).Output()
+	if err != nil{
+		fmt.Println("ERR!! SocketSVR Failed to run command")
+	}
+	return out
+}
 
 func Start() int {
 	//Load from local file
 	Data,result,file := FILE_CHK()
 	var Node *NodeData
+	lock := new(sync.Mutex)
 	//result != file is success of load local file
 	if result == true {
 			tmpNode := new(NodeData)
@@ -151,7 +159,7 @@ func Start() int {
 		} else {
 			fmt.Println("SocketSVR TCP CONN Succeeded")
 			//start go routine
-			go afterConnected(connect, Node, file)
+			go afterConnected(connect, Node, file,&lock)
 		}
 		defer connect.Close()
 
