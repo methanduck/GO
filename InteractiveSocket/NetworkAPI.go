@@ -10,6 +10,16 @@ import (
 	"sync"
 )
 
+type Apis interface {
+	Start() int
+	afterConnected(Android net.Conn, Node *NodeData, file *os.File, mutex *sync.Mutex)
+	COMM_SENDMSG(msg string, Android net.Conn) string
+	COMM_RECVMSG(Android net.Conn, Count int) (*[]byte, int)
+	FILE_CHK() (string, bool, *os.File)
+	FILE_WRITE(data string, file *os.File)
+	EXEC_COMMAND(comm string) string
+}
+
 //고정 변수
 const (
 	FILENAME         = "WindowDATA.txt"
@@ -63,6 +73,7 @@ func afterConnected(Android net.Conn, Node *NodeData, file *os.File, mutex *sync
 	}
 }
 
+//TCP 메시지 전송
 func COMM_SENDMSG(msg string, Android net.Conn) string {
 
 	_, err := Android.Write([]byte(msg))
@@ -73,6 +84,7 @@ func COMM_SENDMSG(msg string, Android net.Conn) string {
 	return "netOK"
 }
 
+//TCP 메시지 수신
 func COMM_RECVMSG(Android net.Conn, Count int) (*[]byte, int) {
 	msg := make([]byte, 4096)
 	count := Count
@@ -95,6 +107,7 @@ func COMM_RECVMSG(Android net.Conn, Count int) (*[]byte, int) {
 	return &msg, len
 }
 
+//파일 확인 및 생성
 func FILE_CHK() (string, bool, *os.File) {
 	var strContent string
 	var flag bool
@@ -118,6 +131,7 @@ func FILE_CHK() (string, bool, *os.File) {
 	return strContent, flag, file
 }
 
+//파일 출력
 func FILE_WRITE(data string, file *os.File) {
 	err := ioutil.WriteFile(file.Name(), []byte(data), os.FileMode(644))
 	if err != nil {
@@ -125,6 +139,7 @@ func FILE_WRITE(data string, file *os.File) {
 	}
 }
 
+//OS 명령 실행
 func EXEC_COMMAND(comm string) string {
 	out, err := exec.Command("/bin/bash", "-c", comm).Output()
 	if err != nil {
@@ -133,6 +148,7 @@ func EXEC_COMMAND(comm string) string {
 	return string(out)
 }
 
+//프로그램 시작부
 func Start() int {
 	//Load from local file
 	Data, result, file := FILE_CHK()
