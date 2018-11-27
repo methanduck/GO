@@ -33,6 +33,6 @@ else
     read YesorNo
     if test -z "$YesorNo"
     then
-        ./main
+        $GOPATH/src/github.com/methanduck/GO/InteractiveSocket/main/main
     fi
 fi
