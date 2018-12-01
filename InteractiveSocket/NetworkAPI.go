@@ -1,76 +1,76 @@
 package InteractiveSocket
 
 import (
-	"bufio"
 	"fmt"
-	"io/ioutil"
 	"net"
-	"os"
 	"os/exec"
+	"strings"
 	"sync"
 )
 
-type Apis interface {
-	Start() int
-	afterConnected(Android net.Conn, Node *NodeData, file *os.File, mutex *sync.Mutex)
-	COMM_SENDMSG(msg string, Android net.Conn) string
-	COMM_RECVMSG(Android net.Conn, Count int) (*[]byte, int)
-	FILE_CHK() (string, bool, *os.File)
-	FILE_WRITE(data string, file *os.File)
-	EXEC_COMMAND(comm string) string
-}
-
 //고정 변수
 const (
-	FILENAME         = "WindowDATA.txt"
+	//서버 포트
 	SVRLISTENINGPORT = "6866"
+	//수신 명령옵션
+	OPEN          = "OPEN"
+	CLOSE         = "CLOSE"
+	ERR_SELECTION = "ERRSELECT"
+)
+
+var (
+	nodeInfo *NodeData
 )
 
 //TCP 연결 수립된 스레드
-func afterConnected(Android net.Conn, Node *NodeData, file *os.File, mutex *sync.Mutex) {
-	flag := false
-	var AndroidData *[]byte
-	var length int
+func afterConnected(Android net.Conn, lock *sync.Mutex, node *NodeData) {
+	var androidData string
+	var splitedAndroidData []string
 
-	//양방향 통신 시작
-	for true {
-		AndroidData, length = COMM_RECVMSG(Android, 0)
-		if AndroidData == nil {
-			return
-		}
-		switch string((*AndroidData)[:length]) {
-		// TODO : 양방향 소켓통신에서 사용될 기능 추가
-		case "HELLO":
-			if Node == nil {
-				fmt.Println("SocketSVR Received HELLO")
-				COMM_SENDMSG("SMARTWINDOW Require HostName", Android)
-				AndroidData, length = COMM_RECVMSG(Android, 0)
-				Node = new(NodeData)
-				mutex.Lock()
-				//메모리에 할당
-				Node.HostName = string((*AndroidData)[:length])
-				//디스크에 할당
-				FILE_WRITE(Node.HostName, file)
-				mutex.Unlock()
-				fmt.Println("SocketSVR Configured HOSTNAME : " + Node.HostName + ")")
-				COMM_SENDMSG("SocketSVR hostname configuration was successful : "+Node.HostName, Android)
-			} else {
-				COMM_SENDMSG("ERR!! SocketSVR Rejected HELLO (Cause : Already Configured HOSTNAME)", Android)
-				fmt.Println("ERR!! SocketSVR Rejected HELLO (Cause : Already Configured HOSTNAME)")
-			}
-			break
-
-		case "BYE":
-			fmt.Println("ERR!! SocketSVR Connection Closed (Cause : Client Request)")
-			COMM_SENDMSG("BYE!", Android)
-			flag = true
-			break
-		}
-		if flag {
-			fmt.Println("SocketSVR Connection Terminated")
-			break
+	//자격증명
+	if node.passWord == "" {
+		//자격증명 초기화
+		COMM_SENDMSG("CONFIG_REQUIRE", Android)
+		androidData = COMM_RECVMSG(Android)
+		splitedAndroidData = strings.Split(androidData, ";")
+		node.passWord = splitedAndroidData[POS_PASSWORD]
+		node.HostName = splitedAndroidData[POS_HOSTNAME]
+		lock.Lock()
+		node.FILE_FLUSH()
+		lock.Unlock()
+		//창문구동
+		Operations(Android)
+	} else {
+		//자격증명 필요
+		androidData = COMM_RECVMSG(Android)
+		splitedAndroidData = strings.Split(androidData, ";")
+		if err := node.HashValidation(splitedAndroidData[POS_PASSWORD], MODE_VALIDATION); err != nil {
+			//자격증명 실
+			fmt.Println("ERR!! SocketSVR Client validation failed ")
+		} else {
+			//자격증명 성공패
+			fmt.Println("SocketSVR Client " + Android.RemoteAddr().String() + " successfully logged in")
+			Operations(Android)
 		}
 	}
+	fmt.Println("SocketSVR Connection terminated with :" + Android.RemoteAddr().String())
+}
+
+func Operations(Android net.Conn) {
+	var operation string
+	for true {
+		operation = COMM_RECVMSG(Android)
+		switch operation {
+		case OPEN:
+
+		case CLOSE:
+
+		default:
+			COMM_SENDMSG(ERR_SELECTION, Android)
+			fmt.Println("ERR!! SocketSVR Received not exist operation")
+		}
+	}
+
 }
 
 //TCP 메시지 전송
@@ -84,8 +84,20 @@ func COMM_SENDMSG(msg string, Android net.Conn) string {
 	return "netOK"
 }
 
-//TCP 메시지 수신
-func COMM_RECVMSG(Android net.Conn, Count int) (*[]byte, int) {
+func COMM_RECVMSG(android net.Conn) string {
+	inStream := make([]byte, 4096)
+	for true {
+		android.Read(inStream)
+		if len(inStream) != 0 {
+			break
+		}
+	}
+	return string(inStream)
+}
+
+/*
+//TCP 메시지 수신 deprecated
+func receive(Android net.Conn, Count int) (*[]byte, int) {
 	msg := make([]byte, 4096)
 	count := Count
 
@@ -106,38 +118,7 @@ func COMM_RECVMSG(Android net.Conn, Count int) (*[]byte, int) {
 	}
 	return &msg, len
 }
-
-//파일 확인 및 생성
-func FILE_CHK() (string, bool, *os.File) {
-	var strContent string
-	var flag bool
-	var file *os.File
-
-	file, err := os.OpenFile(FILENAME, os.O_CREATE|os.O_RDWR, os.FileMode(0644))
-	if err != nil {
-		fmt.Println("ERR!! SocketSVR Failed to open DATAFILE ")
-		flag = false
-	}
-	defer file.Close()
-	reader := bufio.NewReader(file)
-	len, err := os.Stat(FILENAME)
-	content := make([]byte, len.Size())
-	reader.Read(content)
-	strContent = string(content)
-	if strContent != "" {
-		flag = true
-	}
-
-	return strContent, flag, file
-}
-
-//파일 출력
-func FILE_WRITE(data string, file *os.File) {
-	err := ioutil.WriteFile(file.Name(), []byte(data), os.FileMode(644))
-	if err != nil {
-		fmt.Println("ERR!! SocketSVR File write failed")
-	}
-}
+*/
 
 //OS 명령 실행
 func EXEC_COMMAND(comm string) string {
@@ -150,16 +131,14 @@ func EXEC_COMMAND(comm string) string {
 
 //프로그램 시작부
 func Start() int {
-	//Load from local file
-	Data, result, file := FILE_CHK()
-	var Node *NodeData
 	lock := new(sync.Mutex)
-	//result != file is success of load local file
-	if result == true {
-		tmpNode := new(NodeData)
-		tmpNode.HostName = Data
-		Node = tmpNode
+	nodeInfo = new(NodeData)
+	initerr := nodeInfo.FILE_INITIALIZE()
+
+	if initerr != nil {
+		fmt.Println("ERR!! SocketSVR failed to initialize from local file")
 	}
+
 	//Start Socket Server
 	Android, err := net.Listen("tcp", ":"+SVRLISTENINGPORT)
 	if err != nil {
@@ -177,7 +156,7 @@ func Start() int {
 		} else {
 			fmt.Println("SocketSVR TCP CONN Succeeded")
 			//start go routine
-			go afterConnected(connect, Node, file, lock)
+			go afterConnected(connect, lock, nodeInfo)
 		}
 		defer connect.Close()
 
