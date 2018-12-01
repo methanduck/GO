@@ -32,7 +32,6 @@ func (node *NodeData) HashValidation(passwd string, operation string) error {
 	case MODE_PASSWDCONFIG:
 		hashfunc.Write([]byte(passwd))
 		node.passWord = hex.EncodeToString(hashfunc.Sum(nil))
-
 	case MODE_VALIDATION:
 		hashfunc.Write([]byte(passwd))
 		if node.passWord != hex.EncodeToString(hashfunc.Sum(nil)) {
@@ -68,29 +67,6 @@ func (node *NodeData) FILE_INITIALIZE() error {
 	}
 	return nil
 
-	/* deprecated
-	var strContent string
-	var flag bool
-	var file *os.File
-
-	file, err := os.OpenFile(FILENAME, os.O_CREATE|os.O_RDWR, os.FileMode(0644))
-	if err != nil {
-		fmt.Println("ERR!! SocketSVR Failed to open DATAFILE ")
-		flag = false
-	}
-	defer file.Close()
-
-	reader := bufio.NewReader(file)
-	len, err := os.Stat(FILENAME)
-	content := make([]byte, len.Size())
-	reader.Read(content)
-	strContent = string(content)
-	if strContent != "" {
-		flag = true
-	}
-
-	return strContent, flag, file
-	*/
 }
 
 //파일 출력
@@ -101,12 +77,6 @@ func (node *NodeData) FILE_WRITE(data string) error {
 		return err
 	}
 	return nil
-	/* deprecated
-	err := ioutil.WriteFile(file.Name(), []byte(data), os.FileMode(644))
-	if err != nil {
-		fmt.Println("ERR!! SocketSVR File write failed")
-	}
-	*/
 }
 
 //파일 입력

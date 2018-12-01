@@ -1,7 +1,9 @@
 package InteractiveSocket
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net"
 	"os/exec"
 	"strings"
@@ -13,9 +15,10 @@ const (
 	//서버 포트
 	SVRLISTENINGPORT = "6866"
 	//수신 명령옵션
-	OPEN          = "OPEN"
-	CLOSE         = "CLOSE"
-	ERR_SELECTION = "ERRSELECT"
+	OPEN              = "OPEN"
+	CLOSE             = "CLOSE"
+	ERR_SELECTION     = "ERRSELECT"
+	COMM_DISCONNECTED = "EOF"
 )
 
 var (
@@ -32,38 +35,57 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *NodeData) {
 		//자격증명 초기화
 		COMM_SENDMSG("CONFIG_REQUIRE", Android)
 		androidData = COMM_RECVMSG(Android)
+
 		splitedAndroidData = strings.Split(androidData, ";")
-		node.passWord = splitedAndroidData[POS_PASSWORD]
+		if len(splitedAndroidData) < 2 {
+			fmt.Println("ERR!! SocketSVR received empty configuration data terminate connection with :" + Android.RemoteAddr().String() + "(Cause : passwd configuration Function) critical errstate")
+			_ = Android.Close()
+			return
+		}
+		_ = node.HashValidation(splitedAndroidData[0], MODE_PASSWDCONFIG)
 		node.HostName = splitedAndroidData[POS_HOSTNAME]
+		fmt.Println("SocketSVR Configuration Succeeded")
 		lock.Lock()
-		node.FILE_FLUSH()
+		err := node.FILE_FLUSH()
+		if err != nil {
+			fmt.Println("ERR!! SocketSVR failed to flush")
+		}
 		lock.Unlock()
-		//창문구동
+		fmt.Println("SocketSVR FILE write Succeeded")
+		//창문구동패
+
 		Operations(Android)
 	} else {
 		//자격증명 필요
+		COMM_SENDMSG("IDENTIFICATION_REQUIRE", Android)
 		androidData = COMM_RECVMSG(Android)
 		splitedAndroidData = strings.Split(androidData, ";")
 		if err := node.HashValidation(splitedAndroidData[POS_PASSWORD], MODE_VALIDATION); err != nil {
 			//자격증명 실
 			fmt.Println("ERR!! SocketSVR Client validation failed ")
 		} else {
-			//자격증명 성공패
+			//자격증명 성공
 			fmt.Println("SocketSVR Client " + Android.RemoteAddr().String() + " successfully logged in")
 			Operations(Android)
 		}
 	}
 	fmt.Println("SocketSVR Connection terminated with :" + Android.RemoteAddr().String())
+	_ = Android.Close()
 }
 
 func Operations(Android net.Conn) {
 	var operation string
+
+connectionloop:
 	for true {
 		operation = COMM_RECVMSG(Android)
 		switch operation {
 		case OPEN:
 
 		case CLOSE:
+
+		case COMM_DISCONNECTED:
+			break connectionloop
 
 		default:
 			COMM_SENDMSG(ERR_SELECTION, Android)
@@ -86,39 +108,20 @@ func COMM_SENDMSG(msg string, Android net.Conn) string {
 
 func COMM_RECVMSG(android net.Conn) string {
 	inStream := make([]byte, 4096)
+	var err error
 	for true {
-		android.Read(inStream)
+		_, err = android.Read(inStream)
 		if len(inStream) != 0 {
 			break
 		}
 	}
-	return string(inStream)
-}
-
-/*
-//TCP 메시지 수신 deprecated
-func receive(Android net.Conn, Count int) (*[]byte, int) {
-	msg := make([]byte, 4096)
-	count := Count
-
-	if count > 4 {
-		fmt.Println("SocketSVR Retrying read MSG ABORTED (Cause : COUNT OUT)")
-		return nil, -1
+	if err == io.EOF {
+		return "EOF"
 	}
 
-	len, err := Android.Read(msg)
-	if err != nil {
-		var recover *[]byte
-		fmt.Println("SocketSVR Msg receive FAIL")
-		fmt.Println("SocketSVR Retrying read MSG")
-		recover, len = COMM_RECVMSG(Android, count)
-		if recover != nil {
-			return recover, len
-		}
-	}
-	return &msg, len
+	n := bytes.IndexByte(inStream, 0)
+	return string(inStream[:n])
 }
-*/
 
 //OS 명령 실행
 func EXEC_COMMAND(comm string) string {
@@ -154,12 +157,11 @@ func Start() int {
 		if err != nil {
 			fmt.Println("ERR!! SocketSVR TCP CONN FAIL")
 		} else {
-			fmt.Println("SocketSVR TCP CONN Succeeded")
+			fmt.Println("SocketSVR TCP CONN Succeeded : " + connect.RemoteAddr().String())
 			//start go routine
 			go afterConnected(connect, lock, nodeInfo)
 		}
 		defer connect.Close()
-
 	}
 	return 0
 }
