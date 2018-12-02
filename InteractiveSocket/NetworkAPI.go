@@ -53,8 +53,8 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *NodeData) {
 		}
 		lock.Unlock()
 		fmt.Println("SocketSVR FILE write Succeeded")
-		//창문구동패
 
+		//창문구동
 		Operations(Android)
 	} else {
 		//자격증명 필요
@@ -62,11 +62,13 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *NodeData) {
 		androidData = COMM_RECVMSG(Android)
 		splitedAndroidData = strings.Split(androidData, ";")
 		if err := node.HashValidation(splitedAndroidData[POS_PASSWORD], MODE_VALIDATION); err != nil {
-			//자격증명 실
+			//자격증명 실패
 			fmt.Println("ERR!! SocketSVR Client validation failed ")
+			COMM_SENDMSG("ERRVALIDATION", Android)
 		} else {
 			//자격증명 성공
 			fmt.Println("SocketSVR Client " + Android.RemoteAddr().String() + " successfully logged in")
+			COMM_SENDMSG("LOGEDIN", Android)
 			Operations(Android)
 		}
 	}
