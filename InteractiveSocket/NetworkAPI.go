@@ -58,7 +58,7 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *NodeData) {
 		Operations(Android)
 	} else {
 		//자격증명 필요
-		COMM_SENDMSG("IDENTIFICATION_REQUIRE", Android)
+		COMM_SENDMSG("IDENTIFICATION_REQUIRE:"+node.hostName, Android)
 		androidData = COMM_RECVMSG(Android)
 		splitedAndroidData = strings.Split(androidData, ";")
 		if err := node.HashValidation(splitedAndroidData[POS_PASSWORD], MODE_VALIDATION); err != nil {
