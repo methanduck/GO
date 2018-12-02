@@ -17,12 +17,13 @@ const (
 )
 
 type NodeData struct {
-	passWord string
-	HostName string
-	temp     int
-	humidity int
-	gas      int
-	light    int
+	passWord  string
+	hostName  string
+	mode_AUTO bool
+	temp      int
+	humidity  int
+	gas       int
+	light     int
 }
 
 //확인
@@ -60,7 +61,7 @@ func (node *NodeData) FILE_INITIALIZE() error {
 			node.passWord = string(splitedContent[POS_PASSWORD])
 		} else {
 			node.passWord = string(splitedContent[POS_PASSWORD])
-			node.HostName = string(splitedContent[POS_HOSTNAME])
+			node.hostName = string(splitedContent[POS_HOSTNAME])
 		}
 		fmt.Println("SocketSVR Data initialize completed")
 		return nil
@@ -95,6 +96,6 @@ func (node *NodeData) FILE_READ() (string, error) {
 
 //설정된 값들을 파일로 출력
 func (node *NodeData) FILE_FLUSH() error {
-	err := node.FILE_WRITE(node.passWord + ";" + node.HostName)
+	err := node.FILE_WRITE(node.passWord + ";" + node.hostName)
 	return err
 }

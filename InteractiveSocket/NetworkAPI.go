@@ -15,10 +15,11 @@ const (
 	//서버 포트
 	SVRLISTENINGPORT = "6866"
 	//수신 명령옵션
-	OPEN              = "OPEN"
-	CLOSE             = "CLOSE"
-	ERR_SELECTION     = "ERRSELECT"
-	COMM_DISCONNECTED = "EOF"
+	OPERATION_OPEN     = "OPEN"
+	OPERATION_CLOSE    = "CLOSE"
+	OPERATION_MODEAUTO = "AUTO"
+	ERR_SELECTION      = "ERRSELECT"
+	COMM_DISCONNECTED  = "EOF"
 )
 
 var (
@@ -43,7 +44,7 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *NodeData) {
 			return
 		}
 		_ = node.HashValidation(splitedAndroidData[0], MODE_PASSWDCONFIG)
-		node.HostName = splitedAndroidData[POS_HOSTNAME]
+		node.hostName = splitedAndroidData[POS_HOSTNAME]
 		fmt.Println("SocketSVR Configuration Succeeded")
 		lock.Lock()
 		err := node.FILE_FLUSH()
@@ -80,9 +81,11 @@ connectionloop:
 	for true {
 		operation = COMM_RECVMSG(Android)
 		switch operation {
-		case OPEN:
+		case OPERATION_OPEN:
 
-		case CLOSE:
+		case OPERATION_CLOSE:
+
+		case OPERATION_MODEAUTO:
 
 		case COMM_DISCONNECTED:
 			break connectionloop
