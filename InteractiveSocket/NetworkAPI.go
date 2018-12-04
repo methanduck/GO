@@ -21,6 +21,7 @@ const (
 	OPERATION_MODEAUTO = "AUTO"
 	ERR_SELECTION      = "ERRSELECT"
 	COMM_DISCONNECTED  = "EOF"
+	ANDROID_ERR        = "ERR"
 )
 
 var (
@@ -37,9 +38,9 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *NodeData) {
 		//자격증명 초기화
 		COMM_SENDMSG("CONFIG_REQUIRE", Android)
 		androidData = COMM_RECVMSG(Android)
-
 		splitedAndroidData = strings.Split(androidData, ";")
 		if len(splitedAndroidData) < 2 {
+			COMM_SENDMSG(ANDROID_ERR, Android)
 			fmt.Println("ERR!! SocketSVR received empty configuration data terminate connection with :" + Android.RemoteAddr().String() + "(Cause : passwd configuration Function) critical errstate")
 			_ = Android.Close()
 			return
@@ -65,7 +66,7 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *NodeData) {
 		if err := node.HashValidation(splitedAndroidData[POS_PASSWORD], MODE_VALIDATION); err != nil {
 			//자격증명 실패
 			fmt.Println("ERR!! SocketSVR Client validation failed ")
-			COMM_SENDMSG("ERRVALIDATION", Android)
+			COMM_SENDMSG(ANDROID_ERR, Android)
 		} else {
 			//자격증명 성공
 			fmt.Println("SocketSVR Client " + Android.RemoteAddr().String() + " successfully logged in")
@@ -89,6 +90,12 @@ connectionloop:
 		case OPERATION_CLOSE:
 
 		case OPERATION_MODEAUTO:
+			WindowData, err := COMM_RECVJSON(Android)
+			if err != nil {
+				fmt.Println(err)
+				COMM_SENDMSG(ANDROID_ERR, Android)
+			}
+			//TODO : 수신된 윈도우 설정값 적용
 
 		case COMM_DISCONNECTED:
 			break connectionloop
@@ -144,6 +151,7 @@ func COMM_RECVJSON(android net.Conn) (*NodeData, error) {
 	var n int
 	var err error
 	var Node *NodeData
+
 readLoop:
 	for true {
 		n, err = android.Read(inStream)
