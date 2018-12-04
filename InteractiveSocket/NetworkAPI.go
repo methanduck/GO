@@ -32,48 +32,51 @@ var (
 func afterConnected(Android net.Conn, lock *sync.Mutex, node *NodeData) {
 	var androidData string
 	var splitedAndroidData []string
+	init := COMM_RECVMSG(Android)
+	if init == "HELLO" {
+		//자격증명
+		if node.passWord == "" {
+			//자격증명 초기화
+			COMM_SENDMSG("CONFIG_REQUIRE", Android)
+			androidData = COMM_RECVMSG(Android)
+			splitedAndroidData = strings.Split(androidData, ";")
+			if len(splitedAndroidData) < 2 {
+				COMM_SENDMSG("CONFIG_REQUIRE", Android)
+				fmt.Println("ERR!! SocketSVR received empty configuration data terminate connection with :" + Android.RemoteAddr().String() + "(Cause : passwd configuration Function) critical errstate")
+				_ = Android.Close()
+				return
+			}
+			_ = node.HashValidation(splitedAndroidData[0], MODE_PASSWDCONFIG)
+			node.hostName = splitedAndroidData[POS_HOSTNAME]
+			fmt.Println("SocketSVR Configuration Succeeded")
+			lock.Lock()
+			err := node.FILE_FLUSH()
+			if err != nil {
+				fmt.Println("ERR!! SocketSVR failed to flush")
+			}
+			lock.Unlock()
+			fmt.Println("SocketSVR FILE write Succeeded")
 
-	//자격증명
-	if node.passWord == "" {
-		//자격증명 초기화
-		COMM_SENDMSG("CONFIG_REQUIRE", Android)
-		androidData = COMM_RECVMSG(Android)
-		splitedAndroidData = strings.Split(androidData, ";")
-		if len(splitedAndroidData) < 2 {
-			COMM_SENDMSG(ANDROID_ERR, Android)
-			fmt.Println("ERR!! SocketSVR received empty configuration data terminate connection with :" + Android.RemoteAddr().String() + "(Cause : passwd configuration Function) critical errstate")
-			_ = Android.Close()
-			return
-		}
-		_ = node.HashValidation(splitedAndroidData[0], MODE_PASSWDCONFIG)
-		node.hostName = splitedAndroidData[POS_HOSTNAME]
-		fmt.Println("SocketSVR Configuration Succeeded")
-		lock.Lock()
-		err := node.FILE_FLUSH()
-		if err != nil {
-			fmt.Println("ERR!! SocketSVR failed to flush")
-		}
-		lock.Unlock()
-		fmt.Println("SocketSVR FILE write Succeeded")
-
-		//창문구동
-		Operations(Android)
-	} else {
-		//자격증명 필요
-		COMM_SENDMSG("IDENTIFICATION_REQUIRE:"+node.hostName, Android)
-		androidData = COMM_RECVMSG(Android)
-		splitedAndroidData = strings.Split(androidData, ";")
-		if err := node.HashValidation(splitedAndroidData[POS_PASSWORD], MODE_VALIDATION); err != nil {
-			//자격증명 실패
-			fmt.Println("ERR!! SocketSVR Client validation failed ")
-			COMM_SENDMSG(ANDROID_ERR, Android)
-		} else {
-			//자격증명 성공
-			fmt.Println("SocketSVR Client " + Android.RemoteAddr().String() + " successfully logged in")
-			COMM_SENDMSG("LOGEDIN", Android)
+			//창문구동
 			Operations(Android)
+		} else {
+			//자격증명 필요
+			COMM_SENDMSG("IDENTIFICATION_REQUIRE:"+node.hostName, Android)
+			androidData = COMM_RECVMSG(Android)
+			splitedAndroidData = strings.Split(androidData, ";")
+			if err := node.HashValidation(splitedAndroidData[POS_PASSWORD], MODE_VALIDATION); err != nil {
+				//자격증명 실패
+				fmt.Println("ERR!! SocketSVR Client validation failed ")
+				COMM_SENDMSG(ANDROID_ERR, Android)
+			} else {
+				//자격증명 성공
+				fmt.Println("SocketSVR Client " + Android.RemoteAddr().String() + " successfully logged in")
+				COMM_SENDMSG("LOGEDIN", Android)
+				Operations(Android)
+			}
 		}
 	}
+
 	fmt.Println("SocketSVR Connection terminated with :" + Android.RemoteAddr().String())
 	_ = Android.Close()
 }
