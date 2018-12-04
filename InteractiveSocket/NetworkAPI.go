@@ -2,6 +2,7 @@ package InteractiveSocket
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -111,6 +112,7 @@ func COMM_SENDMSG(msg string, Android net.Conn) string {
 	return "netOK"
 }
 
+//TCP 메시지 수신
 func COMM_RECVMSG(android net.Conn) string {
 	inStream := make([]byte, 4096)
 	var err error
@@ -126,6 +128,39 @@ func COMM_RECVMSG(android net.Conn) string {
 
 	n := bytes.IndexByte(inStream, 0)
 	return string(inStream[:n])
+}
+
+func COMM_SENDJSON(windowData *NodeData, android net.Conn) error {
+	marshalledData, err := json.Marshal(windowData)
+	if err != nil {
+		return fmt.Errorf("ERR!! SocketSVR Marshalled failed")
+	}
+	COMM_SENDMSG(string(marshalledData), android)
+	return nil
+}
+
+func COMM_RECVJSON(android net.Conn) (*NodeData, error) {
+	inStream := make([]byte, 4096)
+	var n int
+	var err error
+	var Node *NodeData
+readLoop:
+	for true {
+		n, err = android.Read(inStream)
+		switch err {
+		case nil:
+			break readLoop
+
+		case io.EOF:
+			return nil, fmt.Errorf("ERR!! SocketSVR failed to read JSON")
+		}
+	}
+	err = json.Unmarshal(inStream[:n], Node)
+	if err != nil {
+		return nil, fmt.Errorf("ERR!! SocketSVR Unmarshal failed")
+	}
+
+	return Node, nil
 }
 
 //OS 명령 실행
