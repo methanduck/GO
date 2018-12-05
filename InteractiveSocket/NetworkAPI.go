@@ -67,7 +67,9 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 		fmt.Println("SocketSVR FILE write Succeeded")
 
 		//초기화 과정이므로 별도의 자격증명 없이 명령 구동
+		lock.Lock()
 		Operations(Android, node)
+		lock.Unlock()
 
 	} else {
 		//자격증명이 설정되어 있어 자격증명 시작
@@ -94,7 +96,9 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 			//자격증명 성공
 			fmt.Println("SocketSVR Client " + Android.RemoteAddr().String() + " successfully logged in")
 			_ = COMM_SENDMSG("LOGEDIN", Android)
+			lock.Lock()
 			Operations(Android, node)
+			lock.Unlock()
 		}
 	}
 	fmt.Println("SocketSVR Connection terminated with :" + Android.RemoteAddr().String())
