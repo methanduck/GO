@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="6354dc35-9ab9-4acf-986f-d4d8b3399873" name="Default Changelist" comment="">
+    <list default="true" id="6354dc35-9ab9-4acf-986f-d4d8b3399873" name="Default Changelist" comment="update">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/NetworkAPI.go" beforeDir="false" afterPath="$PROJECT_DIR$/NetworkAPI.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Node.go" beforeDir="false" afterPath="$PROJECT_DIR$/Node.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main/main.go" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -18,12 +20,10 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/NetworkAPI.go">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="560">
-                  <caret line="58" lean-forward="true" selection-start-line="58" selection-end-line="58" />
+                <state relative-caret-position="-897">
+                  <caret line="110" column="5" lean-forward="true" selection-start-line="110" selection-start-column="5" selection-end-line="110" selection-end-column="5" />
                   <folding>
-                    <element signature="n#!!block;n#COMM_SENDMSG#0" />
                     <element signature="n#!!block;n#EXEC_COMMAND#0" />
-                    <element signature="n#!!block;n#Start#0" />
                   </folding>
                 </state>
               </provider>
@@ -32,8 +32,8 @@
           <file pinned="false" current-in-tab="false">
             <entry file="file://$PROJECT_DIR$/main/main.go">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="133">
-                  <caret line="9" selection-start-line="9" selection-end-line="9" />
+                <state relative-caret-position="105">
+                  <caret line="7" column="13" selection-start-line="7" selection-start-column="13" selection-end-line="7" selection-end-column="13" />
                   <folding>
                     <element signature="e#14#74#0" expanded="true" />
                   </folding>
@@ -48,8 +48,8 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/Node.go">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="675">
-                  <caret line="57" column="38" selection-start-line="57" selection-start-column="38" selection-end-line="57" selection-end-column="38" />
+                <state relative-caret-position="256">
+                  <caret line="59" column="68" selection-start-line="59" selection-start-column="68" selection-end-line="59" selection-end-column="68" />
                 </state>
               </provider>
             </entry>
@@ -68,7 +68,6 @@
   <component name="FindInProjectRecents">
     <findStrings>
       <find>errval</find>
-      <find>ANDROID_ERR</find>
     </findStrings>
   </component>
   <component name="GOROOT" path="C:\Go" />
@@ -86,18 +85,18 @@
     <option name="CHANGED_PATHS">
       <list>
         <option value="$PROJECT_DIR$/Main.go" />
-        <option value="$PROJECT_DIR$/main/main.go" />
         <option value="$PROJECT_DIR$/NetworkFunctions.go" />
+        <option value="$PROJECT_DIR$/main/main.go" />
         <option value="$PROJECT_DIR$/Node.go" />
         <option value="$PROJECT_DIR$/NetworkAPI.go" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="87" />
-    <option name="y" value="-20" />
-    <option name="width" value="1720" />
-    <option name="height" value="1100" />
+  <component name="ProjectFrameBounds" extendedState="4">
+    <option name="x" value="1605" />
+    <option name="y" value="25" />
+    <option name="width" value="1835" />
+    <option name="height" value="1415" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <ConfirmationsSetting value="2" id="Add" />
@@ -106,7 +105,29 @@
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
-    <panes />
+    <panes>
+      <pane id="Scope" />
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="InteractiveSocket" type="b2602c69:ProjectViewProjectNode" />
+              <item name="InteractiveSocket" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="InteractiveSocket" type="b2602c69:ProjectViewProjectNode" />
+              <item name="InteractiveSocket" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="InteractiveSocket" type="b2602c69:ProjectViewProjectNode" />
+              <item name="External Libraries" type="cb654da1:ExternalLibrariesNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+    </panes>
   </component>
   <component name="PropertiesComponent">
     <property name="DefaultGoTemplateProperty" value="Go File" />
@@ -196,15 +217,15 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
+    <frame x="1605" y="25" width="1835" height="1415" extended-state="4" />
     <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" weight="0.13696173" />
+      <window_info content_ui="combo" id="Project" order="0" weight="0.1365417" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" sideWeight="0.49880382" weight="0.15828525" />
-      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49461722" weight="0.22835945" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" sideWeight="0.49300504" visible="true" weight="0.1484127" />
       <window_info anchor="bottom" id="Debug" order="3" sideWeight="0.4963645" weight="0.42539158" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -212,8 +233,8 @@
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="bottom" id="Database Changes" order="8" show_stripe_button="false" />
       <window_info anchor="bottom" id="Version Control" order="9" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Terminal" order="10" sideWeight="0.49641147" weight="0.32893652" />
-      <window_info anchor="bottom" id="Event Log" order="11" sideWeight="0.5042644" side_tool="true" visible="true" weight="0.17028199" />
+      <window_info anchor="bottom" id="Terminal" order="10" sideWeight="0.49468383" weight="0.15793651" />
+      <window_info anchor="bottom" id="Event Log" order="11" sideWeight="0.50699496" side_tool="true" visible="true" weight="0.1484127" />
       <window_info active="true" anchor="bottom" id="Messages" order="12" sideWeight="0.49759036" visible="true" weight="0.18115942" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -231,12 +252,24 @@
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/NetworkFunctions.go" />
-    <entry file="file:///usr/lib/go-1.10/src/os/stat.go" />
-    <entry file="file:///usr/lib/go-1.10/src/internal/testlog/log.go" />
+    <entry file="file:///usr/lib/go-1.10/src/os/stat.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="180">
+          <caret line="12" selection-start-line="12" selection-end-line="12" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file:///usr/lib/go-1.10/src/internal/testlog/log.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="975">
+          <caret line="65" selection-start-line="65" selection-end-line="65" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/main/main.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="133">
-          <caret line="9" selection-start-line="9" selection-end-line="9" />
+        <state relative-caret-position="105">
+          <caret line="7" column="13" selection-start-line="7" selection-start-column="13" selection-end-line="7" selection-end-column="13" />
           <folding>
             <element signature="e#14#74#0" expanded="true" />
           </folding>
@@ -245,19 +278,17 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/Node.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="675">
-          <caret line="57" column="38" selection-start-line="57" selection-start-column="38" selection-end-line="57" selection-end-column="38" />
+        <state relative-caret-position="256">
+          <caret line="59" column="68" selection-start-line="59" selection-start-column="68" selection-end-line="59" selection-end-column="68" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/NetworkAPI.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="560">
-          <caret line="58" lean-forward="true" selection-start-line="58" selection-end-line="58" />
+        <state relative-caret-position="-897">
+          <caret line="110" column="5" lean-forward="true" selection-start-line="110" selection-start-column="5" selection-end-line="110" selection-end-column="5" />
           <folding>
-            <element signature="n#!!block;n#COMM_SENDMSG#0" />
             <element signature="n#!!block;n#EXEC_COMMAND#0" />
-            <element signature="n#!!block;n#Start#0" />
           </folding>
         </state>
       </provider>

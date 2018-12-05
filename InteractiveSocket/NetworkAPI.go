@@ -24,58 +24,56 @@ const (
 	ANDROID_ERR        = "ERR"
 )
 
-var (
-	nodeInfo *NodeData
-)
-
 //TCP 연결 수립된 스레드
 func afterConnected(Android net.Conn, lock *sync.Mutex, node *NodeData) {
 	var androidData string
 	var splitedAndroidData []string
-	init := COMM_RECVMSG(Android)
-	if init == "HELLO" {
-		//자격증명
-		if node.passWord == "" {
-			//자격증명 초기화
+	//HELLO가 오지 않을경우 자격증명을 실행하지 않음
+	/*if clientMsg := COMM_RECVMSG(Android); clientMsg != "HELLO" {
+		fmt.Println("SocketSVR Answerd scanning")
+	} else {*/
+	//자격증명
+	if node.passWord == "" {
+		//자격증명 초기화
+		COMM_SENDMSG("CONFIG_REQUIRE", Android)
+		androidData = COMM_RECVMSG(Android)
+		splitedAndroidData = strings.Split(androidData, ";")
+		if len(splitedAndroidData) < 2 {
 			COMM_SENDMSG("CONFIG_REQUIRE", Android)
-			androidData = COMM_RECVMSG(Android)
-			splitedAndroidData = strings.Split(androidData, ";")
-			if len(splitedAndroidData) < 2 {
-				COMM_SENDMSG("CONFIG_REQUIRE", Android)
-				fmt.Println("ERR!! SocketSVR received empty configuration data terminate connection with :" + Android.RemoteAddr().String() + "(Cause : passwd configuration Function) critical errstate")
-				_ = Android.Close()
-				return
-			}
-			_ = node.HashValidation(splitedAndroidData[0], MODE_PASSWDCONFIG)
-			node.hostName = splitedAndroidData[POS_HOSTNAME]
-			fmt.Println("SocketSVR Configuration Succeeded")
-			lock.Lock()
-			err := node.FILE_FLUSH()
-			if err != nil {
-				fmt.Println("ERR!! SocketSVR failed to flush")
-			}
-			lock.Unlock()
-			fmt.Println("SocketSVR FILE write Succeeded")
+			fmt.Println("ERR!! SocketSVR received empty configuration data terminate connection with :" + Android.RemoteAddr().String() + "(might caused search function)")
+			_ = Android.Close()
+			return
+		}
+		_ = node.HashValidation(splitedAndroidData[0], MODE_PASSWDCONFIG)
+		node.hostName = splitedAndroidData[POS_HOSTNAME]
+		fmt.Println("SocketSVR Configuration Succeeded")
+		lock.Lock()
+		err := node.FILE_FLUSH()
+		if err != nil {
+			fmt.Println("ERR!! SocketSVR failed to flush")
+		}
+		lock.Unlock()
+		fmt.Println("SocketSVR FILE write Succeeded")
 
-			//창문구동
-			Operations(Android)
+		//창문구동
+		Operations(Android)
+	} else {
+		//자격증명 필요
+		COMM_SENDMSG("IDENTIFICATION_REQUIRE:"+node.hostName, Android)
+		androidData = COMM_RECVMSG(Android)
+		splitedAndroidData = strings.Split(androidData, ";")
+		if err := node.HashValidation(splitedAndroidData[POS_PASSWORD], MODE_VALIDATION); err != nil {
+			//자격증명 실패
+			fmt.Println("ERR!! SocketSVR Client validation failed ")
+			COMM_SENDMSG(ANDROID_ERR, Android)
 		} else {
-			//자격증명 필요
-			COMM_SENDMSG("IDENTIFICATION_REQUIRE:"+node.hostName, Android)
-			androidData = COMM_RECVMSG(Android)
-			splitedAndroidData = strings.Split(androidData, ";")
-			if err := node.HashValidation(splitedAndroidData[POS_PASSWORD], MODE_VALIDATION); err != nil {
-				//자격증명 실패
-				fmt.Println("ERR!! SocketSVR Client validation failed ")
-				COMM_SENDMSG(ANDROID_ERR, Android)
-			} else {
-				//자격증명 성공
-				fmt.Println("SocketSVR Client " + Android.RemoteAddr().String() + " successfully logged in")
-				COMM_SENDMSG("LOGEDIN", Android)
-				Operations(Android)
-			}
+			//자격증명 성공
+			fmt.Println("SocketSVR Client " + Android.RemoteAddr().String() + " successfully logged in")
+			COMM_SENDMSG("LOGEDIN", Android)
+			Operations(Android)
 		}
 	}
+	//}
 
 	fmt.Println("SocketSVR Connection terminated with :" + Android.RemoteAddr().String())
 	_ = Android.Close()
@@ -89,15 +87,17 @@ connectionloop:
 		operation = COMM_RECVMSG(Android)
 		switch operation {
 		case OPERATION_OPEN:
-
+			fmt.Println("SocketSVR command open execudted")
 		case OPERATION_CLOSE:
-
+			fmt.Println("SocketSVR command close executed")
 		case OPERATION_MODEAUTO:
-			WindowData, err := COMM_RECVJSON(Android)
-			if err != nil {
-				fmt.Println(err)
-				COMM_SENDMSG(ANDROID_ERR, Android)
-			}
+			fmt.Println("SocketSVR command auto executed")
+			/*
+				WindowData, err := COMM_RECVJSON(Android)
+				if err != nil {
+					fmt.Println(err)
+					COMM_SENDMSG(ANDROID_ERR, Android)
+				}*/
 			//TODO : 수신된 윈도우 설정값 적용
 
 		case COMM_DISCONNECTED:
@@ -185,12 +185,15 @@ func EXEC_COMMAND(comm string) string {
 
 //프로그램 시작부
 func Start() int {
+	//변수선언
+	var initerr error
 	lock := new(sync.Mutex)
-	nodeInfo = new(NodeData)
-	initerr := nodeInfo.FILE_INITIALIZE()
-
+	//구조체 객체 선언
+	fileInfo := new(NodeData)
+	_, initerr = fileInfo.FILE_INITIALIZE()
+	//빈 파일을 불러오거나 파일을 읽기에 실패했을 경우
 	if initerr != nil {
-		fmt.Println("ERR!! SocketSVR failed to initialize from local file")
+		fmt.Println(initerr)
 	}
 
 	//Start Socket Server
@@ -210,7 +213,7 @@ func Start() int {
 		} else {
 			fmt.Println("SocketSVR TCP CONN Succeeded : " + connect.RemoteAddr().String())
 			//start go routine
-			go afterConnected(connect, lock, nodeInfo)
+			go afterConnected(connect, lock, fileInfo)
 		}
 		defer connect.Close()
 	}

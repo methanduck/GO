@@ -43,12 +43,12 @@ func (node *NodeData) HashValidation(passwd string, operation string) error {
 }
 
 //파일 확인 및 생성
-func (node *NodeData) FILE_INITIALIZE() error {
+func (node *NodeData) FILE_INITIALIZE() (bool, error) {
 	if _, infoerr := os.Stat(FILENAME); infoerr != nil {
 		//로컬 파일이 존재하지 않을 경우
 		dataFile, err := os.OpenFile(FILENAME, os.O_CREATE|os.O_TRUNC|os.O_RDONLY, os.FileMode(0644))
 		if err != nil {
-			return err
+			return false, err
 		}
 		defer dataFile.Close()
 		fmt.Println("SocketSVR file open succeeded data initialize require!!")
@@ -56,6 +56,9 @@ func (node *NodeData) FILE_INITIALIZE() error {
 		//로컬 파일이 존재 할 경우
 		fmt.Println("SocketSVR Found local datafile commencing data initialize")
 		content, _ := node.FILE_READ()
+		if content == "" {
+			return false, fmt.Errorf("SocketSVR found empty data file")
+		}
 		splitedContent := strings.Split(content, ";")
 		if len(splitedContent) == 1 {
 			node.passWord = string(splitedContent[POS_PASSWORD])
@@ -64,9 +67,9 @@ func (node *NodeData) FILE_INITIALIZE() error {
 			node.hostName = string(splitedContent[POS_HOSTNAME])
 		}
 		fmt.Println("SocketSVR Data initialize completed")
-		return nil
+		return true, nil
 	}
-	return nil
+	return true, nil
 
 }
 

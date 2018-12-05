@@ -1,9 +1,9 @@
 package main
 
 import (
-	src "github.com/methanduck/GO/InteractiveSocket"
+	test "github.com/methanduck/GO/InteractiveSocket"
 )
 
 func main() {
-	src.Start()
+	test.Start()
 }
