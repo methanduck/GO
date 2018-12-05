@@ -7,7 +7,7 @@ import (
 	"io"
 	"net"
 	"os/exec"
-	"strings"
+	//"strings"
 
 	//"strings"
 	"sync"
@@ -24,6 +24,7 @@ const (
 	ERR_SELECTION      = "ERRSELECT"
 	COMM_DISCONNECTED  = "EOF"
 	ANDROID_ERR        = "ERR"
+	ANDROID_LOGIN      = "LOGEDIN"
 	REQUIRE_CONFIG     = "0;null"
 	REQUIRE_AUTH       = "1"
 )
@@ -32,46 +33,83 @@ const (
 //각 인자의 구분자 ";"
 //TCP 연결 수립된 스레드
 func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
-	var androidData string
-	var splitedAndroidData []string
-	var err error
+	//var androidData string
+	//var splitedAndroidData []string
 	//자격증명이 설정되어 있지 않아 자격증명 초기화 시
 	if node.PassWord == "" {
-		//자격증명 초기화 (자격증명 설정이 되어 있지 않을 경우)
-		_ = COMM_SENDMSG(REQUIRE_CONFIG, Android)
-		androidData, err = COMM_RECVMSG(Android)
+		err := COMM_SENDJSON(&Node{Initialized: false}, Android)
 		if err != nil {
 			fmt.Println(err.Error())
-			Android.Close()
 		}
-		splitedAndroidData = strings.Split(androidData, ";")
-		//적절한 인자가 대입되지 않았을 경우
-		if len(splitedAndroidData) < 2 {
-			_ = COMM_SENDMSG("CONFIG_REQUIRE", Android)
-			fmt.Println("ERR!! SocketSVR received empty configuration data terminate connection with :" + Android.RemoteAddr().String() + "(might caused search function)")
-			_ = Android.Close()
+		recvData, err := COMM_RECVJSON(Android)
+		if err != nil {
+			fmt.Println(err.Error())
+		} else {
+			node.DATA_FLUSH(recvData)
+
+			/* deprecated
+			//자격증명 초기화 (자격증명 설정이 되어 있지 않을 경우)
+			_ = COMM_SENDMSG(REQUIRE_CONFIG, Android)
+
+			androidData, err = COMM_RECVMSG(Android)
+			if err != nil {
+				fmt.Println(err.Error())
+				Android.Close()
+			}
+			splitedAndroidData = strings.Split(androidData, ";")
+			//적절한 인자가 대입되지 않았을 경우
+			if len(splitedAndroidData) < 2 {
+				_ = COMM_SENDMSG("CONFIG_REQUIRE", Android)
+				fmt.Println("ERR!! SocketSVR received empty configuration data terminate connection with :" + Android.RemoteAddr().String() + "(might caused search function)")
+				_ = Android.Close()
+				return
+			}
+			//적절한 인자가 대입되어 램에 데이터 할당
+			_ = node.HashValidation(splitedAndroidData[0], MODE_PASSWDCONFIG)
+			node.Hostname = splitedAndroidData[POS_HOSTNAME]
+			*/
+			if node.Initialized {
+				fmt.Println("SocketSVR Configuration Succeeded")
+			} else {
+				fmt.Println("ERR!! SocketSVR failed to init")
+				return
+			}
+
+			//입력된 값을 이용하여 초기화, racecondition으로 락킹 적용
+			lock.Lock()
+			//설정된 값을 파일로 출력
+			err = node.FILE_FLUSH()
+			if err != nil {
+				fmt.Println("ERR!! SocketSVR failed to flush")
+			}
+			lock.Unlock()
+			fmt.Println("SocketSVR FILE write Succeeded")
+
+			//초기화 과정이므로 별도의 자격증명 없이 명령 구동
+			lock.Lock()
+			Operations(Android, node)
+			lock.Unlock()
+		}
+	} else {
+		err := COMM_SENDJSON(&Node{Initialized: node.Initialized, Hostname: node.Hostname}, Android)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		recvData, err := COMM_RECVJSON(Android)
+		if err != nil {
+			fmt.Println(err.Error())
 			return
 		}
-		//적절한 인자가 대입되어 램에 데이터 할당
-		_ = node.HashValidation(splitedAndroidData[0], MODE_PASSWDCONFIG)
-		node.Hostname = splitedAndroidData[POS_HOSTNAME]
-		fmt.Println("SocketSVR Configuration Succeeded")
-		//입력된 값을 이용하여 초기화, racecondition으로 락킹 적용
-		lock.Lock()
-		//설정된 값을 파일로 출력
-		err = node.FILE_FLUSH()
+		err = node.HashValidation(recvData.PassWord, MODE_VALIDATION)
 		if err != nil {
-			fmt.Println("ERR!! SocketSVR failed to flush")
+			fmt.Println("ERR!! SocketSVR client failed to login")
+			_ = COMM_SENDMSG(ANDROID_ERR, Android)
+		} else {
+			fmt.Println("SocketSVR client successfully loged in")
+			_ = COMM_SENDMSG(ANDROID_LOGIN, Android)
+
 		}
-		lock.Unlock()
-		fmt.Println("SocketSVR FILE write Succeeded")
-
-		//초기화 과정이므로 별도의 자격증명 없이 명령 구동
-		lock.Lock()
-		Operations(Android, node)
-		lock.Unlock()
-
-	} else {
+		/* deprecated
 		//자격증명이 설정되어 있어 자격증명 시작
 		_ = COMM_SENDMSG(REQUIRE_AUTH+node.Hostname, Android)
 		androidData, err := COMM_RECVMSG(Android)
@@ -99,7 +137,8 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 			lock.Lock()
 			Operations(Android, node)
 			lock.Unlock()
-		}
+		}*/
+
 	}
 	fmt.Println("SocketSVR Connection terminated with :" + Android.RemoteAddr().String())
 	_ = Android.Close()
@@ -165,6 +204,7 @@ func COMM_RECVMSG(android net.Conn) (string, error) {
 	return string(inStream[:n]), nil
 }
 
+//JSON파일 전송
 func COMM_SENDJSON(windowData *Node, android net.Conn) error {
 	marshalledData, err := json.Marshal(windowData)
 	if err != nil {
@@ -174,6 +214,7 @@ func COMM_SENDJSON(windowData *Node, android net.Conn) error {
 	return nil
 }
 
+//JSON파일 수
 func COMM_RECVJSON(android net.Conn) (res Node, err error) {
 	inStream := make([]byte, 4096)
 	n, err := android.Read(inStream)
