@@ -18,25 +18,22 @@ const (
 	//서버 포트
 	SVRLISTENINGPORT = "6866"
 	//수신 명령옵션
-	OPERATION_OPEN     = "OPEN"
-	OPERATION_CLOSE    = "CLOSE"
-	OPERATION_MODEAUTO = "AUTO"
-	ERR_SELECTION      = "ERRSELECT"
-	COMM_DISCONNECTED  = "EOF"
-	ANDROID_ERR        = "ERR"
-	ANDROID_LOGIN      = "LOGEDIN"
-	REQUIRE_CONFIG     = "0;null"
-	REQUIRE_AUTH       = "1"
+	OPERATION_OPEN        = "OPEN"
+	OPERATION_CLOSE       = "CLOSE"
+	OPERATION_MODEAUTO    = "AUTO"
+	OPERATION_INFORMATION = "INFO"
+	ERR_SELECTION         = "ERRSELECT"
+	COMM_DISCONNECTED     = "EOF"
+	ANDROID_ERR           = "ERR"
+	ANDROID_LOGIN         = "LOGEDIN"
 )
 
 //VALIDATION 성공 : "LOGEDIN" 실패 : "ERR"
 //각 인자의 구분자 ";"
 //TCP 연결 수립된 스레드
 func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
-	//var androidData string
-	//var splitedAndroidData []string
 	//자격증명이 설정되어 있지 않아 자격증명 초기화 시
-	if node.PassWord == "" {
+	if node.passWord == "" {
 		err := COMM_SENDJSON(&Node{Initialized: false}, Android)
 		if err != nil {
 			fmt.Println(err.Error())
@@ -44,30 +41,14 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 		recvData, err := COMM_RECVJSON(Android)
 		if err != nil {
 			fmt.Println(err.Error())
+		} else if recvData.Oper != "" {
+			lock.Lock()
+			Operations(Android, &recvData, node)
+			fmt.Println("SocketSVR testing window")
+			lock.Unlock()
 		} else {
-			node.DATA_FLUSH(recvData)
 
-			/* deprecated
-			//자격증명 초기화 (자격증명 설정이 되어 있지 않을 경우)
-			_ = COMM_SENDMSG(REQUIRE_CONFIG, Android)
-
-			androidData, err = COMM_RECVMSG(Android)
-			if err != nil {
-				fmt.Println(err.Error())
-				Android.Close()
-			}
-			splitedAndroidData = strings.Split(androidData, ";")
-			//적절한 인자가 대입되지 않았을 경우
-			if len(splitedAndroidData) < 2 {
-				_ = COMM_SENDMSG("CONFIG_REQUIRE", Android)
-				fmt.Println("ERR!! SocketSVR received empty configuration data terminate connection with :" + Android.RemoteAddr().String() + "(might caused search function)")
-				_ = Android.Close()
-				return
-			}
-			//적절한 인자가 대입되어 램에 데이터 할당
-			_ = node.HashValidation(splitedAndroidData[0], MODE_PASSWDCONFIG)
-			node.Hostname = splitedAndroidData[POS_HOSTNAME]
-			*/
+			node.DATA_FLUSH(recvData, false)
 			if node.Initialized {
 				fmt.Println("SocketSVR Configuration Succeeded")
 			} else {
@@ -76,18 +57,19 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 			}
 
 			//입력된 값을 이용하여 초기화, racecondition으로 락킹 적용
-			lock.Lock()
+			fileLock := new(sync.Mutex)
+			fileLock.Lock()
 			//설정된 값을 파일로 출력
 			err = node.FILE_FLUSH()
 			if err != nil {
 				fmt.Println("ERR!! SocketSVR failed to flush")
 			}
-			lock.Unlock()
+			fileLock.Unlock()
 			fmt.Println("SocketSVR FILE write Succeeded")
 
 			//초기화 과정이므로 별도의 자격증명 없이 명령 구동
 			lock.Lock()
-			Operations(Android, node)
+			Operations(Android, &recvData, node)
 			lock.Unlock()
 		}
 	} else {
@@ -99,82 +81,52 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 		if err != nil {
 			fmt.Println(err.Error())
 			return
-		}
-		err = node.HashValidation(recvData.PassWord, MODE_VALIDATION)
-		if err != nil {
-			fmt.Println("ERR!! SocketSVR client failed to login")
-			_ = COMM_SENDMSG(ANDROID_ERR, Android)
-		} else {
-			fmt.Println("SocketSVR client successfully loged in")
-			_ = COMM_SENDMSG(ANDROID_LOGIN, Android)
-
-		}
-		/* deprecated
-		//자격증명이 설정되어 있어 자격증명 시작
-		_ = COMM_SENDMSG(REQUIRE_AUTH+node.Hostname, Android)
-		androidData, err := COMM_RECVMSG(Android)
-		if err != nil {
-			fmt.Println(err.Error())
-			_ = Android.Close()
-		}
-		splitedAndroidData = strings.Split(androidData, ";")
-		//적절한 인자가 대입되지 않았을 경우
-		if len(splitedAndroidData) < 2 {
-			_ = COMM_SENDMSG("CONFIG_REQUIRE", Android)
-			fmt.Println("ERR!! SocketSVR received empty configuration data terminate connection with :" + Android.RemoteAddr().String() + "(might caused search function)")
-			_ = Android.Close()
-			return
-		}
-		//적절한 인자가 대입되어 validation 과정 진행
-		if err := node.HashValidation(splitedAndroidData[POS_PASSWORD], MODE_VALIDATION); err != nil {
-			//자격증명 실패
-			fmt.Println("ERR!! SocketSVR Client validation failed ")
-			_ = COMM_SENDMSG(ANDROID_ERR, Android)
-		} else {
-			//자격증명 성공
-			fmt.Println("SocketSVR Client " + Android.RemoteAddr().String() + " successfully logged in")
-			_ = COMM_SENDMSG("LOGEDIN", Android)
+		} else if recvData.Oper != "" {
 			lock.Lock()
-			Operations(Android, node)
+			Operations(Android, &recvData, node)
 			lock.Unlock()
-		}*/
-
+			fmt.Println("SocketSVR testing window")
+		} else {
+			err = node.HashValidation(recvData.passWord, MODE_VALIDATION)
+			if err != nil {
+				fmt.Println("ERR!! SocketSVR client failed to login")
+				_ = COMM_SENDMSG(ANDROID_ERR, Android)
+			} else {
+				fmt.Println("SocketSVR client successfully loged in")
+				_ = COMM_SENDMSG(ANDROID_LOGIN, Android)
+				Operations(Android, &recvData, node)
+			}
+		}
 	}
 	fmt.Println("SocketSVR Connection terminated with :" + Android.RemoteAddr().String())
 	_ = Android.Close()
 }
 
 //창문 구동
-func Operations(Android net.Conn, node *Node) {
-	var operation string
-	var err error
-	var ConfigData Node
-connectionloop:
-	for true {
-		operation, err = COMM_RECVMSG(Android)
+func Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) {
+	switch AndroidNode.Oper {
+	case OPERATION_OPEN:
+		fmt.Println("SocketSVR command open execudted")
+	case OPERATION_CLOSE:
+		fmt.Println("SocketSVR command close executed")
+	case OPERATION_INFORMATION:
+		// sensorData ;= EXEC_COMMAND("") TODO : 모든 센서 값 출력하는 쉘 절대경로 작성 및 센서별 입력순서 파악
+		//splitedData := strings.Split(sensorData,",")
+		err := COMM_SENDJSON(&Node{}, Android)
 		if err != nil {
-			fmt.Println(err.Error() + "(Cause : at Operations)")
+			fmt.Println(err.Error())
+			return
 		}
-		switch operation {
-		case OPERATION_OPEN:
-			fmt.Println("SocketSVR command open execudted")
-		case OPERATION_CLOSE:
-			fmt.Println("SocketSVR command close executed")
-		case OPERATION_MODEAUTO:
-			ConfigData, err = COMM_RECVJSON(Android)
-			if err != nil {
-				fmt.Println(err.Error())
-				break connectionloop
-			}
-			node.DATA_FLUSH(ConfigData)
-			fmt.Println("SocketSVR command auto executed")
-		case COMM_DISCONNECTED:
-			break connectionloop
+		fmt.Println("SocketSVR command info executed")
 
-		default:
-			COMM_SENDMSG(ERR_SELECTION, Android)
-			fmt.Println("ERR!! SocketSVR Received not exist operation")
-		}
+	case OPERATION_MODEAUTO:
+		SvrNode.DATA_FLUSH(*AndroidNode, true)
+		fmt.Println("SocketSVR command auto executed")
+	case COMM_DISCONNECTED:
+		return
+	default:
+		COMM_SENDMSG(ERR_SELECTION, Android)
+		fmt.Println("ERR!! SocketSVR Received not exist operation")
 	}
 
 }
