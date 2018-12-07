@@ -66,27 +66,32 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 			_ = COMM_SENDJSON(&Node{Ack: SvrAck.Ack}, Android)
 			return
 		} else {
-			//들어온 json에 창문 명령이 존재하지 않을 경우
-			node.DATA_FLUSH(recvData, false)
-			if node.Initialized {
-				fmt.Println("SocketSVR Configuration Succeeded")
+			if recvData.PassWord == "" {
+
 			} else {
-				fmt.Println("ERR!! SocketSVR failed to init")
-				return
+				//들어온 json에 창문 명령이 존재하지 않을 경우
+				node.DATA_FLUSH(recvData, false)
+				if node.Initialized {
+					fmt.Println("SocketSVR Configuration Succeeded")
+				} else {
+					fmt.Println("ERR!! SocketSVR failed to init")
+					return
+				}
+
+				//입력된 값을 이용하여 초기화, racecondition으로 락킹 적용, 파일 출력
+				fileLock := new(sync.Mutex)
+				fileLock.Lock()
+				err = node.FILE_FLUSH()
+				if err != nil {
+					fmt.Println("ERR!! SocketSVR failed to flush")
+					_ = COMM_SENDJSON(&Node{Ack: "SmartWindow failed to write, reboot please"}, Android)
+					return
+				}
+				fileLock.Unlock()
+				fmt.Println("SocketSVR FILE write Succeeded")
+				_ = COMM_SENDJSON(&Node{Ack: "OK"}, Android)
 			}
 
-			//입력된 값을 이용하여 초기화, racecondition으로 락킹 적용, 파일 출력
-			fileLock := new(sync.Mutex)
-			fileLock.Lock()
-			err = node.FILE_FLUSH()
-			if err != nil {
-				fmt.Println("ERR!! SocketSVR failed to flush")
-				_ = COMM_SENDJSON(&Node{Ack: "SmartWindow failed to write, reboot please"}, Android)
-				return
-			}
-			fileLock.Unlock()
-			fmt.Println("SocketSVR FILE write Succeeded")
-			_ = COMM_SENDJSON(&Node{Ack: "OK"}, Android)
 		}
 	} else {
 		//자격증명 필요
