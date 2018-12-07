@@ -25,7 +25,7 @@ const (
 	OPERATION_INFORMATION = "INFO"
 	ERR_SELECTION         = "ERRSELECT"
 	COMM_DISCONNECTED     = "EOF"
-	ANDROID_ERR           = "ERR"
+	ANDROID_ERR           = "ERR" // TODO : err는 메시지 형태로 전송
 	ANDROID_OK            = "OK"
 	DELIMITER             = ","
 )
@@ -44,29 +44,27 @@ const (
 //////////////////////////////////////////////////////////////////////////
 func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 	//자격증명이 설정되어 있지 않아 자격증명 초기화 시
-	if node.passWord == "" {
+	if node.PassWord == "" {
+		//초기화 되어있음을 전송
 		err := COMM_SENDJSON(&Node{Initialized: false}, Android)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
+		//안드로이드로부터 초기화할 값을 수신함
 		recvData, err := COMM_RECVJSON(Android)
 		if err != nil {
 			fmt.Println(err.Error())
-			//정상 수신
 		} else if recvData.Oper != "" {
 			//들어온 json에 창문 명령이 존재 할 경우
 			//TODO : 지속적으로 통신을 유지하며 창문 개폐
-			/*
-				lock.Lock()
-				SvrAck,_ := Operations(Android, &recvData, node)
-				lock.Unlock()
-				err := COMM_SENDJSON(SvrAck,Android)
-				if err != nil {
-					  fmt.Println(err.Error())
-					return
-				}
-				fmt.Println("SocketSVR testing window")
-			*/
+			lock.Lock()
+			SvrAck, err := Operations(Android, &recvData, node)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			lock.Unlock()
+			_ = COMM_SENDJSON(&Node{Ack: SvrAck.Ack}, Android)
+			return
 		} else {
 			//들어온 json에 창문 명령이 존재하지 않을 경우
 			node.DATA_FLUSH(recvData, false)
@@ -77,13 +75,14 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 				return
 			}
 
-			//입력된 값을 이용하여 초기화, racecondition으로 락킹 적용
+			//입력된 값을 이용하여 초기화, racecondition으로 락킹 적용, 파일 출력
 			fileLock := new(sync.Mutex)
 			fileLock.Lock()
-			//설정된 값을 파일로 출력
 			err = node.FILE_FLUSH()
 			if err != nil {
 				fmt.Println("ERR!! SocketSVR failed to flush")
+				_ = COMM_SENDJSON(&Node{Ack: "SmartWindow failed to write, reboot please"}, Android)
+				return
 			}
 			fileLock.Unlock()
 			fmt.Println("SocketSVR FILE write Succeeded")
@@ -99,30 +98,19 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 		if err != nil {
 			fmt.Println(err.Error())
 			return
-		} else if recvData.Oper != "" {
-			lock.Lock()
-			_, _ = Operations(Android, &recvData, node)
-			lock.Unlock()
-			fmt.Println("SocketSVR testing window")
-			if err != nil {
-
-			}
-		} else {
-			err = node.HashValidation(recvData.passWord, MODE_VALIDATION)
-			if err != nil {
-				fmt.Println("ERR!! SocketSVR client failed to login")
-				_ = COMM_SENDMSG(ANDROID_ERR, Android)
-			} else {
-				fmt.Println("SocketSVR client successfully loged in")
-				_ = COMM_SENDMSG("LOGEDIN", Android)
-				SvrAck, _ := Operations(Android, &recvData, node)
-				err := COMM_SENDJSON(SvrAck, Android)
-				if err != nil {
-					fmt.Println(err.Error())
-					return
-				}
-			}
 		}
+		err = node.Authentication(&recvData)
+		if err != nil {
+			_ = COMM_SENDJSON(&Node{Ack: ANDROID_ERR}, Android)
+			return
+		}
+		lock.Lock()
+		SvrAck, err := Operations(Android, &recvData, node)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		lock.Unlock()
+		_ = COMM_SENDJSON(SvrAck, Android)
 	}
 	fmt.Println("SocketSVR Connection terminated with :" + Android.RemoteAddr().String())
 	_ = Android.Close()
@@ -140,10 +128,6 @@ func Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) (*Node, erro
 	case OPERATION_INFORMATION:
 		// sensorData ;= EXEC_COMMAND("") TODO : 모든 센서 값 출력하는 쉘 절대경로 작성 및 센서별 입력순서 파악
 		//splitedData := strings.Split(sensorData,",")
-		err := COMM_SENDJSON(&Node{}, Android)
-		if err != nil {
-			return nil, err
-		}
 		fmt.Println("SocketSVR command info executed")
 		return &Node{Ack: "OK"}, nil
 	case OPERATION_MODEAUTO:
@@ -153,10 +137,9 @@ func Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) (*Node, erro
 		break
 
 	default:
-		COMM_SENDMSG(ERR_SELECTION, Android)
 		fmt.Println("SocketSVR Received null data")
 	}
-	return nil, nil
+	return &Node{Ack: ANDROID_ERR}, fmt.Errorf("SocketSVR failed to execute Operation :" + AndroidNode.Oper)
 }
 
 //TCP 메시지 전송

@@ -18,7 +18,7 @@ const (
 
 type Node struct {
 	Initialized bool   `json:"Initialized"`
-	passWord    string `json:"passWord"`
+	PassWord    string `json:"PassWord"`
 	// IPAddr      string `json:"IPAddr"` TODO: 항목 검토필요
 	Hostname string `json:"Hostname"`
 	ModeAuto bool   `json:"ModeAuto"`
@@ -30,16 +30,23 @@ type Node struct {
 	Light    int    `json:"Light"`
 }
 
+func (node *Node) Authentication(input *Node) error {
+	if node.PassWord != input.PassWord {
+		return fmt.Errorf(ANDROID_ERR)
+	}
+	return nil
+}
+
 //자격증명
 func (node *Node) HashValidation(passwd string, operation string) error {
 	hashfunc := md5.New()
 	switch operation {
 	case MODE_PASSWDCONFIG:
 		hashfunc.Write([]byte(passwd))
-		node.passWord = hex.EncodeToString(hashfunc.Sum(nil))
+		node.PassWord = hex.EncodeToString(hashfunc.Sum(nil))
 	case MODE_VALIDATION:
 		hashfunc.Write([]byte(passwd))
-		if node.passWord != hex.EncodeToString(hashfunc.Sum(nil)) {
+		if node.PassWord != hex.EncodeToString(hashfunc.Sum(nil)) {
 			return fmt.Errorf("ERR!! Password validation failed")
 		}
 	}
@@ -65,9 +72,9 @@ func (node *Node) FILE_INITIALIZE() (bool, error) {
 		}
 		splitedContent := strings.Split(content, ";")
 		if len(splitedContent) == 1 {
-			node.passWord = string(splitedContent[POS_PASSWORD])
+			node.PassWord = string(splitedContent[POS_PASSWORD])
 		} else {
-			node.passWord = string(splitedContent[POS_PASSWORD])
+			node.PassWord = string(splitedContent[POS_PASSWORD])
 			node.Hostname = string(splitedContent[POS_HOSTNAME])
 		}
 		fmt.Println("SocketSVR Data initialize completed")
@@ -103,7 +110,7 @@ func (node *Node) FILE_READ() (string, error) {
 
 //설정된 값들을 파일로 출력
 func (node *Node) FILE_FLUSH() error {
-	err := node.FILE_WRITE(node.passWord + ";" + node.Hostname)
+	err := node.FILE_WRITE(node.PassWord + ";" + node.Hostname)
 	return err
 }
 
@@ -112,7 +119,7 @@ func (node *Node) FILE_FLUSH() error {
 func (node *Node) DATA_FLUSH(inputData Node, mode bool) {
 
 	node.Initialized = true
-	node.passWord = inputData.passWord
+	node.PassWord = inputData.PassWord
 	node.Hostname = inputData.Hostname
 	node.ModeAuto = inputData.ModeAuto
 	node.Oper = inputData.Oper
