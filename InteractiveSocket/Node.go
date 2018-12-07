@@ -17,12 +17,13 @@ const (
 )
 
 type Node struct {
-	Initialized bool `json:"Initialized"`
-	passWord    string
+	Initialized bool   `json:"Initialized"`
+	passWord    string `json:"passWord"`
 	// IPAddr      string `json:"IPAddr"` TODO: 항목 검토필요
-	Hostname string `json:"hostname"`
+	Hostname string `json:"Hostname"`
 	ModeAuto bool   `json:"ModeAuto"`
 	Oper     string `json:"Oper"`
+	Ack      string `json:"Ack"`
 	Temp     int    `json:"Temp"`
 	Humidity int    `json:"Humidity"`
 	Gas      int    `json:"Gas"`

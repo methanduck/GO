@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	//"hash/adler32"
 	"io"
 	"net"
 	"os/exec"
@@ -25,12 +26,22 @@ const (
 	ERR_SELECTION         = "ERRSELECT"
 	COMM_DISCONNECTED     = "EOF"
 	ANDROID_ERR           = "ERR"
-	ANDROID_LOGIN         = "LOGEDIN"
+	ANDROID_OK            = "OK"
+	DELIMITER             = ","
 )
 
 //VALIDATION 성공 : "LOGEDIN" 실패 : "ERR"
 //각 인자의 구분자 ";"
-//TCP 연결 수립된 스레드
+/////////////////////////////////////////////////////////////////////////
+//  1. 초기화 되지 않은 노드에 접속 시 Initialized = false 전송 (json)
+//  2. 안드로이드는 false 수신 시 설정 값을 json으로 전송 이 때 json Oper 항목에 창문 수행 명령이 있을경우 바로 수행 TODO : 지속적인 통신 연결 위해 소켓유지 필요
+//  3. 수행명령이 존재하지 않을 경우 값을 파일로 쓰고 안드로이드로 "OK" 를 json 으로 전송함
+//
+// 1-1. 초기화 된 노드에 접속시 Initialized = true 전송 (json)
+// 2-1. 안드로이드는 true 수신 시 창문에 validation과 동시에 명령을 수행시키기 위해 창문으로 수행 명령 (JSON) Oper항목에 명령을 담아 전송
+// 2-2. 창문에서 validation 수행 실패 시 "ERR"를 json으로 전송하고 validation 수행 성공 시 Operations 로 넘어가 창문을 조작
+// 3-1. 수행이 종료되면 "OK"를 json으로 전송
+//////////////////////////////////////////////////////////////////////////
 func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 	//자격증명이 설정되어 있지 않아 자격증명 초기화 시
 	if node.passWord == "" {
@@ -41,13 +52,23 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 		recvData, err := COMM_RECVJSON(Android)
 		if err != nil {
 			fmt.Println(err.Error())
+			//정상 수신
 		} else if recvData.Oper != "" {
-			lock.Lock()
-			Operations(Android, &recvData, node)
-			fmt.Println("SocketSVR testing window")
-			lock.Unlock()
+			//들어온 json에 창문 명령이 존재 할 경우
+			//TODO : 지속적으로 통신을 유지하며 창문 개폐
+			/*
+				lock.Lock()
+				SvrAck,_ := Operations(Android, &recvData, node)
+				lock.Unlock()
+				err := COMM_SENDJSON(SvrAck,Android)
+				if err != nil {
+					  fmt.Println(err.Error())
+					return
+				}
+				fmt.Println("SocketSVR testing window")
+			*/
 		} else {
-
+			//들어온 json에 창문 명령이 존재하지 않을 경우
 			node.DATA_FLUSH(recvData, false)
 			if node.Initialized {
 				fmt.Println("SocketSVR Configuration Succeeded")
@@ -66,13 +87,10 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 			}
 			fileLock.Unlock()
 			fmt.Println("SocketSVR FILE write Succeeded")
-
-			//초기화 과정이므로 별도의 자격증명 없이 명령 구동
-			lock.Lock()
-			Operations(Android, &recvData, node)
-			lock.Unlock()
+			_ = COMM_SENDJSON(&Node{Ack: "OK"}, Android)
 		}
 	} else {
+		//자격증명 필요
 		err := COMM_SENDJSON(&Node{Initialized: node.Initialized, Hostname: node.Hostname}, Android)
 		if err != nil {
 			fmt.Println(err.Error())
@@ -83,9 +101,12 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 			return
 		} else if recvData.Oper != "" {
 			lock.Lock()
-			Operations(Android, &recvData, node)
+			_, _ = Operations(Android, &recvData, node)
 			lock.Unlock()
 			fmt.Println("SocketSVR testing window")
+			if err != nil {
+
+			}
 		} else {
 			err = node.HashValidation(recvData.passWord, MODE_VALIDATION)
 			if err != nil {
@@ -93,8 +114,13 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 				_ = COMM_SENDMSG(ANDROID_ERR, Android)
 			} else {
 				fmt.Println("SocketSVR client successfully loged in")
-				_ = COMM_SENDMSG(ANDROID_LOGIN, Android)
-				Operations(Android, &recvData, node)
+				_ = COMM_SENDMSG("LOGEDIN", Android)
+				SvrAck, _ := Operations(Android, &recvData, node)
+				err := COMM_SENDJSON(SvrAck, Android)
+				if err != nil {
+					fmt.Println(err.Error())
+					return
+				}
 			}
 		}
 	}
@@ -103,32 +129,34 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 }
 
 //창문 구동
-func Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) {
+func Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) (*Node, error) {
 	switch AndroidNode.Oper {
 	case OPERATION_OPEN:
 		fmt.Println("SocketSVR command open execudted")
+		return &Node{Ack: "OK"}, nil
 	case OPERATION_CLOSE:
 		fmt.Println("SocketSVR command close executed")
+		return &Node{Ack: "OK"}, nil
 	case OPERATION_INFORMATION:
 		// sensorData ;= EXEC_COMMAND("") TODO : 모든 센서 값 출력하는 쉘 절대경로 작성 및 센서별 입력순서 파악
 		//splitedData := strings.Split(sensorData,",")
 		err := COMM_SENDJSON(&Node{}, Android)
 		if err != nil {
-			fmt.Println(err.Error())
-			return
+			return nil, err
 		}
 		fmt.Println("SocketSVR command info executed")
-
+		return &Node{Ack: "OK"}, nil
 	case OPERATION_MODEAUTO:
 		SvrNode.DATA_FLUSH(*AndroidNode, true)
 		fmt.Println("SocketSVR command auto executed")
 	case COMM_DISCONNECTED:
-		return
+		break
+
 	default:
 		COMM_SENDMSG(ERR_SELECTION, Android)
-		fmt.Println("ERR!! SocketSVR Received not exist operation")
+		fmt.Println("SocketSVR Received null data")
 	}
-
+	return nil, nil
 }
 
 //TCP 메시지 전송
@@ -162,22 +190,23 @@ func COMM_SENDJSON(windowData *Node, android net.Conn) error {
 	if err != nil {
 		return fmt.Errorf("ERR!! SocketSVR Marshalled failed")
 	}
-	android.Write(marshalledData)
+	_, _ = android.Write(marshalledData)
 	return nil
 }
 
 //JSON파일 수
 func COMM_RECVJSON(android net.Conn) (res Node, err error) {
 	inStream := make([]byte, 4096)
+	tmp := Node{}
 	n, err := android.Read(inStream)
 	if err != nil {
 		return res, fmt.Errorf("ERR!! SocketSVR failed to receive message")
 	}
-	err = json.Unmarshal(inStream[:n], res)
+	err = json.Unmarshal(inStream[:n], &tmp)
 	if err != nil {
 		return res, fmt.Errorf("ERR!! SocketSVR failed to Unmarshaling data stream")
 	}
-	return res, nil
+	return tmp, nil
 }
 
 //OS 명령 실행
