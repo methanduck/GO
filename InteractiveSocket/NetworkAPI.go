@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
+
 	//"hash/adler32"
 	"io"
 	"net"
@@ -74,7 +76,7 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 				if node.Initialized {
 					fmt.Println("SocketSVR Configuration Succeeded")
 				} else {
-					fmt.Println("ERR!! SocketSVR failed to init")
+					fmt.Println("COMM_SVR : SocketSVR failed to init")
 					return
 				}
 
@@ -83,7 +85,7 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 				fileLock.Lock()
 				err = node.FILE_FLUSH()
 				if err != nil {
-					fmt.Println("ERR!! SocketSVR failed to flush")
+					fmt.Println("COMM_SVR : SocketSVR failed to flush")
 					_ = COMM_SENDJSON(&Node{Ack: "SmartWindow failed to write, reboot please"}, Android)
 					return
 				}
@@ -151,7 +153,7 @@ func Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) (*Node, erro
 func COMM_SENDMSG(msg string, Android net.Conn) error {
 	_, err := Android.Write([]byte(msg))
 	if err != nil {
-		return fmt.Errorf("ERR!! SocketSVR failed to send message")
+		return fmt.Errorf("COMM_SVR : SocketSVR failed to send message")
 	}
 	return nil
 }
@@ -162,7 +164,7 @@ func COMM_RECVMSG(android net.Conn) (string, error) {
 	var err error
 	_, err = android.Read(inStream)
 	if len(inStream) == 0 {
-		return "", fmt.Errorf("ERR!! SocketSVR received empty message")
+		return "", fmt.Errorf("COMM_SVR : SocketSVR received empty message")
 	}
 	if err == io.EOF {
 		return "EOF", nil
@@ -176,23 +178,23 @@ func COMM_RECVMSG(android net.Conn) (string, error) {
 func COMM_SENDJSON(windowData *Node, android net.Conn) error {
 	marshalledData, err := json.Marshal(windowData)
 	if err != nil {
-		return fmt.Errorf("ERR!! SocketSVR Marshalled failed")
+		return fmt.Errorf("COMM_SVR : SocketSVR Marshalled failed")
 	}
 	_, _ = android.Write(marshalledData)
 	return nil
 }
 
-//JSON파일 수
+//JSON파일 수신
 func COMM_RECVJSON(android net.Conn) (res Node, err error) {
 	inStream := make([]byte, 4096)
 	tmp := Node{}
 	n, err := android.Read(inStream)
 	if err != nil {
-		return res, fmt.Errorf("ERR!! SocketSVR failed to receive message")
+		return res, fmt.Errorf("COMM_SVR : SocketSVR failed to receive message")
 	}
 	err = json.Unmarshal(inStream[:n], &tmp)
 	if err != nil {
-		return res, fmt.Errorf("ERR!! SocketSVR failed to Unmarshaling data stream")
+		return res, fmt.Errorf("COMM_SVR : SocketSVR failed to Unmarshaling data stream")
 	}
 	return tmp, nil
 }
@@ -201,7 +203,7 @@ func COMM_RECVJSON(android net.Conn) (res Node, err error) {
 func EXEC_COMMAND(comm string) string {
 	out, err := exec.Command("/bin/bash", "-c", comm).Output()
 	if err != nil {
-		fmt.Println("ERR!! SocketSVR Failed to run command")
+		fmt.Println("COMM_SVR : SocketSVR Failed to run command")
 	}
 	return string(out)
 }
@@ -222,23 +224,32 @@ func Start() int {
 	//Start Socket Server
 	Android, err := net.Listen("tcp", ":"+SVRLISTENINGPORT)
 	if err != nil {
-		fmt.Println("ERR!! SocketSVR Open FAIL")
+		fmt.Println("COMM_SVR : SocketSVR Open FAIL")
 		return 1
 	} else {
 		fmt.Println("SocketSVR Open Succedded")
 	}
-	defer Android.Close()
+	defer func() {
+		err := Android.Close()
+		if err != nil {
+			log.Print("COMM_SVR: ERR! client connection terminated not completely " + Android.Addr().String())
+		}
+	}()
 
 	for {
 		connect, err := Android.Accept()
 		if err != nil {
-			fmt.Println("ERR!! SocketSVR TCP CONN FAIL")
+			fmt.Println("COMM_SVR : SocketSVR TCP CONN FAIL")
 		} else {
 			fmt.Println("SocketSVR TCP CONN Succeeded : " + connect.RemoteAddr().String())
 			//start go routine
 			go afterConnected(connect, lock, fileInfo)
 		}
-		defer connect.Close()
+		defer func() {
+			err := Android.Close()
+			if err != nil {
+				log.Print("COMM_SVR: ERR! client connection terminated not completely " + Android.Addr().String())
+			}
+		}()
 	}
-	return 0
 }
