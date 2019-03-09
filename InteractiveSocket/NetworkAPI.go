@@ -34,45 +34,46 @@ const (
 
 //VALIDATION 성공 : "LOGEDIN" 실패 : "ERR"
 //각 인자의 구분자 ";"
-/////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //  1. 초기화 되지 않은 노드에 접속 시 Initialized = false 전송 (json)
-//  2. 안드로이드는 false 수신 시 설정 값을 json으로 전송 이 때 json Oper 항목에 창문 수행 명령이 있을경우 바로 수행 TODO : 지속적인 통신 연결 위해 소켓유지 필요
+//  2. 안드로이드는 false 수신 시 설정 값을 json으로 전송 이 때 json Oper 항목에 창문 수행 명령이 있을경우 바로 수행
 //  3. 수행명령이 존재하지 않을 경우 값을 파일로 쓰고 안드로이드로 "OK" 를 json 으로 전송함
 //
 // 1-1. 초기화 된 노드에 접속시 Initialized = true 전송 (json)
 // 2-1. 안드로이드는 true 수신 시 창문에 validation과 동시에 명령을 수행시키기 위해 창문으로 수행 명령 (JSON) Oper항목에 명령을 담아 전송
 // 2-2. 창문에서 validation 수행 실패 시 "ERR"를 json으로 전송하고 validation 수행 성공 시 Operations 로 넘어가 창문을 조작
 // 3-1. 수행이 종료되면 "OK"를 json으로 전송
-//////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//TODO: 해결됌(Operations을 계속 실행함)
 func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 	//자격증명이 설정되어 있지 않아 자격증명 초기화 시
 	if node.PassWord == "" {
-		//초기화 되어있음을 전송
+		//초기화되어 있지 않음을 Client에 전송
 		err := COMM_SENDJSON(&Node{Initialized: false}, Android)
 		if err != nil {
-			fmt.Println(err.Error())
+			log.Print(err.Error())
 		}
 		//안드로이드로부터 초기화할 값을 수신함
 		recvData, err := COMM_RECVJSON(Android)
 		if err != nil {
-			fmt.Println(err.Error())
-		} else if recvData.Oper != "" {
-			//들어온 json에 창문 명령이 존재 할 경우
-			//TODO : 지속적으로 통신을 유지하며 창문 개폐
+			log.Print(err.Error())
+		}
+
+		//들어온 json에 창문 명령이 존재 할 경우
+		//TODO: 창문에 계정 설정을 먼저 할 지 개폐 먼저 할지 결정
+		//TODO: if 구문 정리 필요
+		if recvData.Oper != "" {
 			lock.Lock()
-			SvrAck, err := Operations(Android, &recvData, node)
-			if err != nil {
-				fmt.Println(err.Error())
-			}
+			Operations(Android, &recvData, node)
+			_ = COMM_SENDJSON(&Node{Ack: ANDROID_OK}, Android)
 			lock.Unlock()
-			_ = COMM_SENDJSON(&Node{Ack: SvrAck.Ack}, Android)
 			return
 		} else {
 			if recvData.PassWord == "" {
 
 			} else {
 				//들어온 json에 창문 명령이 존재하지 않을 경우
-				node.DATA_FLUSH(recvData, false)
+				node.DATA_INITIALIZER(recvData, false)
 				if node.Initialized {
 					fmt.Println("SocketSVR Configuration Succeeded")
 				} else {
@@ -95,58 +96,73 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 			}
 
 		}
-	} else {
 		//자격증명 필요
+	} else {
+		//현재 노드상태 전송
 		err := COMM_SENDJSON(&Node{Initialized: node.Initialized, Hostname: node.Hostname}, Android)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
+		//Client 데이터 수신
 		recvData, err := COMM_RECVJSON(Android)
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
+		//수신된 데이터를 기반으로 Auth 실행
 		err = node.Authentication(&recvData)
 		if err != nil {
 			_ = COMM_SENDJSON(&Node{Ack: ANDROID_ERR}, Android)
 			return
 		}
+		//창문 명령 실행
 		lock.Lock()
-		SvrAck, err := Operations(Android, &recvData, node)
-		if err != nil {
-			fmt.Println(err.Error())
-		}
+		Operations(Android, &recvData, node)
+		_ = COMM_SENDJSON(&Node{Ack: ANDROID_OK}, Android)
 		lock.Unlock()
-		_ = COMM_SENDJSON(SvrAck, Android)
 	}
 	fmt.Println("SocketSVR Connection terminated with :" + Android.RemoteAddr().String())
 	_ = Android.Close()
 }
 
 //창문 구동
-func Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) (*Node, error) {
-	switch AndroidNode.Oper {
-	case OPERATION_OPEN:
-		fmt.Println("SocketSVR command open execudted")
-		return &Node{Ack: "OK"}, nil
-	case OPERATION_CLOSE:
-		fmt.Println("SocketSVR command close executed")
-		return &Node{Ack: "OK"}, nil
-	case OPERATION_INFORMATION:
-		// sensorData ;= EXEC_COMMAND("") TODO : 모든 센서 값 출력하는 쉘 절대경로 작성 및 센서별 입력순서 파악
-		//splitedData := strings.Split(sensorData,",")
-		fmt.Println("SocketSVR command info executed")
-		return &Node{Ack: "OK"}, nil
-	case OPERATION_MODEAUTO:
-		SvrNode.DATA_FLUSH(*AndroidNode, true)
-		fmt.Println("SocketSVR command auto executed")
-	case COMM_DISCONNECTED:
-		break
+func Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) {
+	//TODO: Error 조건이 센서에 있다면 Error 추가하기
+	isBreak := false
+	var node Node
+	node = *AndroidNode
+	for {
+		switch AndroidNode.Oper {
+		case OPERATION_OPEN:
+			fmt.Println("COMM_SVR : INFO command open execudted")
+		case OPERATION_CLOSE:
+			fmt.Println("COMM_SVR : INFO command close executed")
+		case OPERATION_INFORMATION:
+			// sensorData ;= EXEC_COMMAND("") TODO : 모든 센서 값 출력하는 쉘 절대경로 작성 및 센서별 입력순서 파악
+			//splitedData := strings.Split(sensorData,",")
+			fmt.Println("COMM_SVR : INFO command info executed")
+		case OPERATION_MODEAUTO:
+			if AndroidNode.ModeAuto {
+				SvrNode.ModeAuto = true
+				fmt.Print("COMM_SVR : INFO WINDOW_MODE_AUTO=TRUE")
+			} else {
+				SvrNode.ModeAuto = false
+				fmt.Print("COMM_SVR : INFO WINDOW_MODE_AUTO=FALSE")
+			}
+		case COMM_DISCONNECTED:
+			isBreak = true
+			break
 
-	default:
-		fmt.Println("SocketSVR Received null data")
+		default:
+			log.Print("COMM_SVR : ERR! Received not compatible command / func Operations")
+		}
+		if isBreak {
+			break
+		} else {
+			node, _ = COMM_RECVJSON(Android)
+			AndroidNode = &node
+		}
 	}
-	return &Node{Ack: ANDROID_ERR}, fmt.Errorf("SocketSVR failed to execute Operation :" + AndroidNode.Oper)
 }
 
 //TCP 메시지 전송
@@ -224,15 +240,15 @@ func Start() int {
 	//Start Socket Server
 	Android, err := net.Listen("tcp", ":"+SVRLISTENINGPORT)
 	if err != nil {
-		fmt.Println("COMM_SVR : SocketSVR Open FAIL")
+		log.Print("COMM_SVR : ERR Socket Open FAIL")
 		return 1
 	} else {
-		fmt.Println("SocketSVR Open Succedded")
+		log.Print("COMM_SVR : INFO Socket Open Succedded")
 	}
 	defer func() {
 		err := Android.Close()
 		if err != nil {
-			log.Print("COMM_SVR: ERR! client connection terminated not completely " + Android.Addr().String())
+			log.Print("COMM_SVR: ERR Socket server terminated abnormaly " + Android.Addr().String())
 		}
 	}()
 
@@ -246,9 +262,9 @@ func Start() int {
 			go afterConnected(connect, lock, fileInfo)
 		}
 		defer func() {
-			err := Android.Close()
+			err := connect.Close()
 			if err != nil {
-				log.Print("COMM_SVR: ERR! client connection terminated not completely " + Android.Addr().String())
+				log.Print("COMM_SVR: ERR! client connection terminated abnormaly " + Android.Addr().String())
 			}
 		}()
 	}

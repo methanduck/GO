@@ -23,7 +23,7 @@ type Node struct {
 	Hostname string `json:"Hostname"`
 	ModeAuto bool   `json:"ModeAuto"`
 	Oper     string `json:"Oper"`
-	Ack      string `json:"Ack"`
+	Ack      string `json:"Ack"` // "OK", "SUCCESS", "TRUE", "FAIL", "FALSE"
 	Temp     int    `json:"Temp"`
 	Humidity int    `json:"Humidity"`
 	Gas      int    `json:"Gas"`
@@ -116,8 +116,7 @@ func (node *Node) FILE_FLUSH() error {
 
 //입력된 구조체의 값을 적용
 //mode false; 모든 자료 초기화 true ; 자동화 설정 위함
-func (node *Node) DATA_FLUSH(inputData Node, mode bool) {
-
+func (node *Node) DATA_INITIALIZER(inputData Node, mode bool) {
 	node.Initialized = true
 	node.PassWord = inputData.PassWord
 	node.Hostname = inputData.Hostname
