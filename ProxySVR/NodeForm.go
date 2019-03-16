@@ -1,6 +1,8 @@
 package ProxySVR
 
-type Node struct {
+type NodeForm struct {
+	Code        int    `json:"code"`
+	Message     string `json:"message"`
 	Initialized bool   `json:"Initialized"`
 	PassWord    string `json:"PassWord"`
 	IPAddr      string `json:"IPAddr"`

@@ -94,7 +94,6 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 				fmt.Println("SocketSVR FILE write Succeeded")
 				_ = COMM_SENDJSON(&Node{Ack: "OK"}, Android)
 			}
-
 		}
 		//자격증명 필요
 	} else {
