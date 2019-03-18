@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="cd7fa305-8b38-4b09-861e-84e8b5ad9d59" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go" beforeDir="false" afterPath="$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -11,49 +11,17 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.4126029">
-      <split-first>
-        <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-          <file pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/InteractiveSocket/Node.go">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="551">
-                  <caret line="40" column="41" selection-start-line="40" selection-start-column="41" selection-end-line="40" selection-end-column="41" />
-                  <folding>
-                    <element signature="n#!!block;n#Authentication#0" />
-                    <element signature="n#!!block;n#HashValidation#0" />
-                    <element signature="n#!!block;n#FILE_INITIALIZE#0" />
-                    <element signature="n#!!block;n#FILE_WRITE#0" />
-                    <element signature="n#!!block;n#FILE_READ#0" />
-                    <element signature="n#!!block;n#FILE_FLUSH#0" />
-                    <element signature="n#!!block;n#DATA_INITIALIZER#0" />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-        </leaf>
-      </split-first>
-      <split-second>
-        <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-          <file pinned="false" current-in-tab="true">
-            <entry file="file://$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go">
-              <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="725">
-                  <caret line="82" selection-start-line="82" selection-end-line="82" />
-                  <folding>
-                    <element signature="n#!!block;n#COMM_SENDMSG#0" />
-                    <element signature="n#!!block;n#COMM_RECVMSG#0" />
-                    <element signature="n#!!block;n#COMM_SENDJSON#0" />
-                    <element signature="n#!!block;n#EXEC_COMMAND#0" />
-                  </folding>
-                </state>
-              </provider>
-            </entry>
-          </file>
-        </leaf>
-      </split-second>
-    </splitter>
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/ProxySVR/main/main.go">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="154">
+              <caret line="7" lean-forward="true" selection-start-line="7" selection-end-line="7" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
@@ -76,7 +44,7 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="1134" />
     <option name="y" value="344" />
     <option name="width" value="1596" />
@@ -87,6 +55,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -104,11 +73,21 @@
               <item name="GO" type="462c0819:PsiDirectoryNode" />
               <item name="Prerequisites" type="462c0819:PsiDirectoryNode" />
             </path>
+            <path>
+              <item name="GO" type="b2602c69:ProjectViewProjectNode" />
+              <item name="GO" type="462c0819:PsiDirectoryNode" />
+              <item name="ProxySVR" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="GO" type="b2602c69:ProjectViewProjectNode" />
+              <item name="GO" type="462c0819:PsiDirectoryNode" />
+              <item name="ProxySVR" type="462c0819:PsiDirectoryNode" />
+              <item name="main" type="462c0819:PsiDirectoryNode" />
+            </path>
           </expand>
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -133,16 +112,33 @@
       </list>
     </option>
   </component>
+  <component name="RunManager">
+    <configuration name="go build github.com/GO/ProxySVR" type="GoApplicationRunConfiguration" factoryName="Go Application" temporary="true" nameIsGenerated="true">
+      <module name="GO" />
+      <working_directory value="$PROJECT_DIR$/" />
+      <go_parameters value="-i" />
+      <kind value="PACKAGE" />
+      <filePath value="$PROJECT_DIR$/" />
+      <package value="github.com/GO/ProxySVR" />
+      <directory value="$PROJECT_DIR$/" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Go Build.go build github.com/GO/ProxySVR" />
+      </list>
+    </recent_temporary>
+  </component>
   <component name="ToolWindowManager">
-    <frame x="1134" y="344" width="1596" height="1056" extended-state="0" />
+    <frame x="0" y="27" width="3440" height="1413" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.19401042" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.09021226" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.3299532" />
-      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Run" order="2" weight="0.32933652" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -170,7 +166,7 @@
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/InteractiveSocket/Node.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="551">
+        <state relative-caret-position="435">
           <caret line="40" column="41" selection-start-line="40" selection-start-column="41" selection-end-line="40" selection-end-column="41" />
           <folding>
             <element signature="n#!!block;n#Authentication#0" />
@@ -194,6 +190,13 @@
             <element signature="n#!!block;n#COMM_SENDJSON#0" />
             <element signature="n#!!block;n#EXEC_COMMAND#0" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/ProxySVR/main/main.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="154">
+          <caret line="7" lean-forward="true" selection-start-line="7" selection-end-line="7" />
         </state>
       </provider>
     </entry>
