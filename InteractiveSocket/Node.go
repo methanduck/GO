@@ -17,17 +17,18 @@ const (
 )
 
 type Node struct {
-	Initialized bool   `json:"Initialized"`
-	PassWord    string `json:"PassWord"`
-	IPAddr      string `json:"IPAddr"` //TODO: 항목 검토필요
-	Hostname    string `json:"Hostname"`
-	ModeAuto    bool   `json:"ModeAuto"`
-	Oper        string `json:"Oper"`
-	Ack         string `json:"Ack"` // "OK", "SUCCESS", "TRUE", "FAIL", "FALSE", "CONT"
-	Temp        int    `json:"Temp"`
-	Humidity    int    `json:"Humidity"`
-	Gas         int    `json:"Gas"`
-	Light       int    `json:"Light"`
+	Which       bool   `json:"which"`       //창문 또는 어플리케이션을 구분 // 창문 : 0 , 어플리케이션 : 1
+	Initialized bool   `json:"Initialized"` //TODO: 바로 인증 전송
+	PassWord    string `json:"PassWord"`    //창문 비밀번호
+	IPAddr      string `json:"IPAddr"`      //TODO: 항목 검토필요
+	Hostname    string `json:"Hostname"`    //중복되는 IP에서도 창문을 구별 할 수 있음
+	ModeAuto    bool   `json:"ModeAuto"`    //자동 모드 설정
+	Oper        string `json:"Oper"`        // "OPEN", "CLOSE", "CONF"
+	Ack         string `json:"Ack"`         // "OK", "SUCCESS", "TRUE", "FAIL", "FALSE", "CONT"
+	Temp        int    `json:"Temp"`        // temperature
+	Humidity    int    `json:"Humidity"`    // Humidity
+	Gas         int    `json:"Gas"`         // Gas
+	Light       int    `json:"Light"`       // Light
 }
 
 func (node *Node) Authentication(input *Node) error {
