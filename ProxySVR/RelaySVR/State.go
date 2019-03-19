@@ -38,7 +38,7 @@ func (db dbData) Startbolt(pinfo *log.Logger, perr *log.Logger) {
 }
 
 func (db dbData) Update(key string, val bool) {
-	pInfo.Println("BOLT : Update prcessing")
+	db.pInfo.Println("BOLT : Update prcessing")
 	var tmp string
 	db.database.Update(func(tx *bolt2.Tx) error {
 		bucket := tx.Bucket([]byte("Node"))
@@ -48,8 +48,29 @@ func (db dbData) Update(key string, val bool) {
 			tmp = "0"
 		}
 		if err := bucket.Put([]byte(key), []byte(tmp)); err != nil {
-			pErr.Println("BOLT : failed to update database (Err code, key :" + key + "val :" + strconv.FormatBool(val))
+			db.PErr.Println("BOLT : failed to update database (Err code, key :" + key + "val :" + strconv.FormatBool(val))
 		}
 		return nil
 	})
+}
+
+func (db dbData) IsOnline(key string) bool {
+	db.pInfo.Println("BOLT : State query initiated")
+	var result bool
+	if err := db.database.View(func(tx *bolt2.Tx) error {
+		bucket := tx.Bucket([]byte("Node"))
+		state := bucket.Get([]byte(key))
+		if state != nil {
+			if string(state[:]) == "1" {
+				result = true
+			} else {
+				result = false
+			}
+		} else {
+			return fmt.Errorf("failed to get state")
+		}
+		return nil
+	}); err != nil {
+		db.PErr.Println("BOLT : %s", err)
+	}
 }

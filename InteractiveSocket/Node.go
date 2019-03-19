@@ -19,15 +19,15 @@ const (
 type Node struct {
 	Initialized bool   `json:"Initialized"`
 	PassWord    string `json:"PassWord"`
-	// IPAddr      string `json:"IPAddr"` TODO: 항목 검토필요
-	Hostname string `json:"Hostname"`
-	ModeAuto bool   `json:"ModeAuto"`
-	Oper     string `json:"Oper"`
-	Ack      string `json:"Ack"` // "OK", "SUCCESS", "TRUE", "FAIL", "FALSE"
-	Temp     int    `json:"Temp"`
-	Humidity int    `json:"Humidity"`
-	Gas      int    `json:"Gas"`
-	Light    int    `json:"Light"`
+	IPAddr      string `json:"IPAddr"` //TODO: 항목 검토필요
+	Hostname    string `json:"Hostname"`
+	ModeAuto    bool   `json:"ModeAuto"`
+	Oper        string `json:"Oper"`
+	Ack         string `json:"Ack"` // "OK", "SUCCESS", "TRUE", "FAIL", "FALSE", "CONT"
+	Temp        int    `json:"Temp"`
+	Humidity    int    `json:"Humidity"`
+	Gas         int    `json:"Gas"`
+	Light       int    `json:"Light"`
 }
 
 func (node *Node) Authentication(input *Node) error {
