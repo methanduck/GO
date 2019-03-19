@@ -20,17 +20,14 @@ import (
 const (
 	//서버 포트
 	SVRLISTENINGPORT = "6866"
-	//수신 명령옵션
-	OPERATION_OPEN        = "OPEN"
-	OPERATION_CLOSE       = "CLOSE"
-	OPERATION_MODEAUTO    = "AUTO"
-	OPERATION_INFORMATION = "INFO"
-	ERR_SELECTION         = "ERRSELECT"
-	COMM_DISCONNECTED     = "EOF"
-	ANDROID_ERR           = "ERR" // TODO : err는 메시지 형태로 전송
-	ANDROID_OK            = "OK"
-	DELIMITER             = ","
 )
+
+type Window struct {
+	PInfo     *log.Logger
+	PErr      *log.Logger
+	svrInfo   *Node
+	Available *sync.Mutex
+}
 
 //VALIDATION 성공 : "LOGEDIN" 실패 : "ERR"
 //각 인자의 구분자 ";"
@@ -45,7 +42,7 @@ const (
 // 3-1. 수행이 종료되면 "OK"를 json으로 전송
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //TODO: 해결됌(Operations을 계속 실행함)
-func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
+func (win *Window) afterConnected(Android net.Conn, node *Node) {
 	//자격증명이 설정되어 있지 않아 자격증명 초기화 시
 	if node.PassWord == "" {
 		//초기화되어 있지 않음을 Client에 전송
@@ -63,10 +60,10 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 		//TODO: 창문에 계정 설정을 먼저 할 지 개폐 먼저 할지 결정
 		//TODO: if 구문 정리 필요
 		if recvData.Oper != "" {
-			lock.Lock()
-			Operations(Android, &recvData, node)
-			_ = COMM_SENDJSON(&Node{Ack: ANDROID_OK}, Android)
-			lock.Unlock()
+			win.Available.Lock()
+			win.Operations(Android, &recvData, node)
+			_ = COMM_SENDJSON(&Node{Ack: COMM_SUCCESS}, Android)
+			win.Available.Unlock()
 			return
 		} else {
 			if recvData.PassWord == "" {
@@ -98,7 +95,7 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 		//자격증명 필요
 	} else {
 		//현재 노드상태 전송
-		err := COMM_SENDJSON(&Node{Initialized: node.Initialized, Hostname: node.Hostname}, Android)
+		err := COMM_SENDJSON(&Node{Initialized: node.Initialized, Identity: node.Identity}, Android)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
@@ -111,21 +108,21 @@ func afterConnected(Android net.Conn, lock *sync.Mutex, node *Node) {
 		//수신된 데이터를 기반으로 Auth 실행
 		err = node.Authentication(&recvData)
 		if err != nil {
-			_ = COMM_SENDJSON(&Node{Ack: ANDROID_ERR}, Android)
+			_ = COMM_SENDJSON(&Node{Ack: COMM_ERR}, Android)
 			return
 		}
 		//창문 명령 실행
-		lock.Lock()
-		Operations(Android, &recvData, node)
-		_ = COMM_SENDJSON(&Node{Ack: ANDROID_OK}, Android)
-		lock.Unlock()
+		win.Available.Lock()
+		win.Operations(Android, &recvData, node)
+		_ = COMM_SENDJSON(&Node{Ack: COMM_SUCCESS}, Android)
+		win.Available.Unlock()
 	}
 	fmt.Println("SocketSVR Connection terminated with :" + Android.RemoteAddr().String())
 	_ = Android.Close()
 }
 
-//창문 구동
-func Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) {
+//창문 명령
+func (win *Window) Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) {
 	//TODO: Error 조건이 센서에 있다면 Error 추가하기
 	isBreak := false
 	var node Node
@@ -134,6 +131,7 @@ func Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) {
 		switch AndroidNode.Oper {
 		case OPERATION_OPEN:
 			fmt.Println("COMM_SVR : INFO command open execudted")
+			COMM_SENDJSON(&Node{Ack: COMM_SUCCESS}, Android)
 		case OPERATION_CLOSE:
 			fmt.Println("COMM_SVR : INFO command close executed")
 		case OPERATION_INFORMATION:
@@ -148,7 +146,10 @@ func Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) {
 				SvrNode.ModeAuto = false
 				fmt.Print("COMM_SVR : INFO WINDOW_MODE_AUTO=FALSE")
 			}
-		case COMM_DISCONNECTED:
+		case OPERATION_PROXY:
+			SvrNode.ModeProxy = AndroidNode.ModeProxy
+			COMM_SENDJSON(&Node{Ack: COMM_SUCCESS}, Android)
+		case COMM_SUCCESS: //TODO : ANDROID OK로 수정함
 			isBreak = true
 			break
 
@@ -224,13 +225,13 @@ func EXEC_COMMAND(comm string) string {
 }
 
 //프로그램 시작부
-func Start() int {
+func (win *Window) Start() int {
 	//변수선언
 	var initerr error
-	lock := new(sync.Mutex)
+	win.Available = new(sync.Mutex)
 	//구조체 객체 선언
-	fileInfo := new(Node)
-	_, initerr = fileInfo.FILE_INITIALIZE()
+	win.svrInfo = new(Node)
+	_, initerr = win.svrInfo.FILE_INITIALIZE()
 	//빈 파일을 불러오거나 파일을 읽기에 실패했을 경우
 	if initerr != nil {
 		fmt.Println(initerr)
@@ -258,7 +259,7 @@ func Start() int {
 		} else {
 			fmt.Println("SocketSVR TCP CONN Succeeded : " + connect.RemoteAddr().String())
 			//start go routine
-			go afterConnected(connect, lock, fileInfo)
+			go win.afterConnected(connect, win.svrInfo)
 		}
 		defer func() {
 			err := connect.Close()

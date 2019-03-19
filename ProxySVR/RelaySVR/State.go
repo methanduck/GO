@@ -1,76 +1,150 @@
-package main
+package RelaySVR
 
 import (
+	"encoding/json"
 	"fmt"
-	bolt2 "github.com/boltdb/bolt"
+	"github.com/GO/InteractiveSocket"
+	"github.com/boltdb/bolt"
 	"log"
-	"strconv"
+	"time"
+)
+
+const (
+	ONLINE   = true
+	OFFLINE  = false
+	NOTFOUND = "N/A"
 )
 
 type dbData struct {
-	database *bolt2.DB
+	database *bolt.DB
 	pInfo    *log.Logger
 	PErr     *log.Logger
 }
 
-func (db dbData) Startbolt(pinfo *log.Logger, perr *log.Logger) {
+type NodeState struct {
+	Identity        string
+	IsOnline        bool
+	IsRequireConn   bool
+	ApplicationData InteractiveSocket.Node
+	Locking         int
+}
+
+func (db dbData) Startbolt(pinfo *log.Logger, perr *log.Logger) *bolt.DB {
 	db.pInfo = pinfo
 	db.PErr = perr
-	bolt, err := bolt2.Open("SmartWindow.db", 0600, nil)
+	boltdb, err := bolt.Open("SmartWindow.db", 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		log.Panic("Failed to open bolt database")
 	}
-	db.database = bolt
+	db.database = boltdb
 	defer func() {
-		if err := bolt.Close(); err != nil {
+		if err := boltdb.Close(); err != nil {
 			perr.Panic("bolt database abnormally terminated")
 		}
 	}()
 
 	pinfo.Println("BOLT : create new bucket")
-	bolt.Update(func(tx *bolt2.Tx) error {
+	if err := boltdb.Update(func(tx *bolt.Tx) error {
 		if _, err := tx.CreateBucketIfNotExists([]byte("Node")); err != nil {
-			return fmt.Errorf("BOLT : bucket creation failed")
+			return fmt.Errorf("bucket creation failed")
 		}
 		pinfo.Println("BOLT : bucket creation secceded")
 		return nil
-	})
+	}); err != nil {
+		db.PErr.Println("BOLT : Failed Startbolt (ERR code :" + err.Error() + ")")
+	}
+	return boltdb
 }
 
-func (db dbData) Update(key string, val bool) {
-	db.pInfo.Println("BOLT : Update prcessing")
-	var tmp string
-	db.database.Update(func(tx *bolt2.Tx) error {
-		bucket := tx.Bucket([]byte("Node"))
-		if val {
-			tmp = "1"
-		} else {
-			tmp = "0"
-		}
-		if err := bucket.Put([]byte(key), []byte(tmp)); err != nil {
-			db.PErr.Println("BOLT : failed to update database (Err code, key :" + key + "val :" + strconv.FormatBool(val))
-		}
-		return nil
-	})
+func (db dbData) ApplicationNodeUpdate(data InteractiveSocket.Node, locking int) error {
+	db.pInfo.Println("BOLT : Commence application request update ")
+	state, err := db.GetWindowData(data.Identity)
+	if err != nil {
+		db.PErr.Println("BOLT : Failed (ERR code :" + err.Error() + ")")
+		return err
+	}
+	state.ApplicationData = data
+	state.Locking = locking
+	if err := db.Update(state); err != nil {
+		db.PErr.Println("BOLT : Failed (ERR code :" + err.Error() + ")")
+		return err
+	}
+	return nil
 }
 
-func (db dbData) IsOnline(key string) bool {
-	db.pInfo.Println("BOLT : State query initiated")
-	var result bool
-	if err := db.database.View(func(tx *bolt2.Tx) error {
+func (db dbData) Update(data NodeState) error {
+	db.pInfo.Println("BOLT : Commence window request update")
+	if err := db.database.Update(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte("Node"))
-		state := bucket.Get([]byte(key))
-		if state != nil {
-			if string(state[:]) == "1" {
-				result = true
-			} else {
-				result = false
-			}
-		} else {
-			return fmt.Errorf("failed to get state")
+		var put_Temp []byte
+		var err error
+		if put_Temp, err = json.Marshal(data); err != nil {
+			return fmt.Errorf(data.Identity)
+		}
+		if err = bucket.Put([]byte(data.Identity), put_Temp); err != nil {
+			return fmt.Errorf(data.Identity + ",put error")
 		}
 		return nil
 	}); err != nil {
-		db.PErr.Println("BOLT : %s", err)
+		return fmt.Errorf("Failed to update window request")
 	}
+
+	return nil
+}
+
+func (db dbData) IsOnline(key string) (bool, error) {
+	db.pInfo.Println("BOLT : State query initiated")
+	var state_Temp NodeState
+
+	if err := db.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("Node"))
+		data := bucket.Get([]byte(key))
+		if err := json.Unmarshal(data, &state_Temp); err != nil {
+			db.PErr.Println("BOLT : Unmarshal failed")
+			return fmt.Errorf("Unmarshal failed")
+		}
+		return nil
+	}); err != nil {
+		return false, err
+	}
+	return state_Temp.IsOnline, nil
+}
+
+func (db dbData) IsRequest(key string) (bool, error) {
+	db.pInfo.Println("BOLT : State req query initiated")
+	var state_Temp NodeState
+
+	if err := db.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("Node"))
+		data := bucket.Get([]byte(key))
+		if err := json.Unmarshal(data, &state_Temp); err != nil {
+			db.PErr.Println("BOLT ; Unmarshal failed")
+			return fmt.Errorf("Unmarshal failed")
+		}
+		return nil
+	}); err != nil {
+		return false, err
+	}
+	return state_Temp.IsRequireConn, nil
+}
+
+func (db dbData) GetWindowData(key string) (NodeState, error) {
+	db.pInfo.Println("BOLT : Getting state query")
+	var node NodeState
+
+	if err := db.database.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte("Node"))
+		data := bucket.Get([]byte(key))
+		if data == nil {
+			return fmt.Errorf(NOTFOUND)
+		}
+		if err := json.Unmarshal(data, &node); err != nil {
+			return fmt.Errorf("Unmarshal failed")
+		}
+		return nil
+	}); err != nil {
+		return NodeState{}, err
+	}
+
+	return node, nil
 }
