@@ -1,3 +1,6 @@
+/*
+	Main Relay Server
+*/
 package RelaySVR
 
 import (
@@ -7,7 +10,10 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
+)
+
+const (
+	Service_port = "6866"
 )
 
 type Server struct {
@@ -18,8 +24,9 @@ type Server struct {
 	PErr     *log.Logger
 }
 
+//Start Serer
 func Start() error {
-	Server_port := flag.String("port", "6866", "Server Port")
+	Server_port := flag.String("port", Service_port, "Server Port")
 	Server_Addr := flag.String("addr", "127.0.0.1", "Server Addr")
 	SERVER := Server{SVR_Addr: *Server_Addr, SVR_Port: *Server_port}
 	SERVER.Pinfo = log.New(os.Stdout, "INFO :", log.LstdFlags)
@@ -68,13 +75,13 @@ func (server Server) afterConnected(conn net.Conn, perr *log.Logger) error {
 				server.PErr.Println("Failed to send JSON")
 			}
 		}
-		if status == OFFLINE {
-			_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.COMM_FAIL}, conn) //ERR처리 무시함
+		if status {
+			_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.STATE_OFFLINE}, conn) //ERR처리 무시함
 		} else {
 			//ONLINE일 경우
 			waiting := 1
 			if err := server.State.ApplicationNodeUpdate(result, waiting); err != nil {
-				if err.Error() == NOTFOUND {
+				if err.Error() == NOTAVAILABLE {
 					_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.COMM_ERR}, conn) //ERR처리 무시함
 				}
 			}

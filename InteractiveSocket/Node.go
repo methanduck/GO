@@ -27,22 +27,23 @@ const (
 	MODE_VALIDATION       = "VALIDATION"
 	POS_PASSWORD          = 0
 	POS_HOSTNAME          = 1
+	STATE_OFFLINE         = 0
 )
 
 type Node struct {
-	Which       bool   `json:"which"`       //창문 또는 어플리케이션을 구분 // 창문 : false , 어플리케이션 : true
-	Initialized bool   `json:"Initialized"` //TODO: 바로 인증 전송
-	PassWord    string `json:"PassWord"`    //창문 비밀번호
-	IPAddr      string `json:"IPAddr"`      //TODO: 항목 검토필요
-	Identity    string `json:"Identity"`    //중복되는 IP에서도 창문을 구별 할 수 있음
-	ModeAuto    bool   `json:"ModeAuto"`    //자동 모드 설정
-	ModeProxy   bool   `json:"mode_proxy"`
-	Oper        string `json:"Oper"`     // "OPEN", "CLOSE", "CONF"
-	Ack         string `json:"Ack"`      // "OK", "COMM_SUCCESS", "TRUE", "FAIL", "FALSE"
-	Temp        int    `json:"Temp"`     // temperature
-	Humidity    int    `json:"Humidity"` // Humidity
-	Gas         int    `json:"Gas"`      // Gas
-	Light       int    `json:"Light"`    // Light
+	Which       bool        `json:"which"`       //창문 또는 어플리케이션을 구분 // 창문 : false , 어플리케이션 : true
+	Initialized bool        `json:"Initialized"` //TODO: 바로 인증 전송
+	PassWord    string      `json:"PassWord"`    //창문 비밀번호
+	IPAddr      string      `json:"IPAddr"`      //TODO: 항목 검토필요
+	Identity    string      `json:"Identity"`    //중복되는 IP에서도 창문을 구별 할 수 있음
+	ModeAuto    bool        `json:"ModeAuto"`    //자동 모드 설정
+	ModeProxy   bool        `json:"mode_proxy"`
+	Oper        string      `json:"Oper"`     // "OPEN", "CLOSE", "CONF"
+	Ack         interface{} `json:"Ack"`      // "OK", "COMM_SUCCESS", "TRUE", "FAIL", "FALSE", "OFFLINE"
+	Temp        int         `json:"Temp"`     // temperature
+	Humidity    int         `json:"Humidity"` // Humidity
+	Gas         int         `json:"Gas"`      // Gas
+	Light       int         `json:"Light"`    // Light
 }
 
 func (node *Node) Authentication(input *Node) error {
