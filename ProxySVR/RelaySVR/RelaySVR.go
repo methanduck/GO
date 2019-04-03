@@ -108,7 +108,7 @@ func (server Server) afterConnected(conn net.Conn, perr *log.Logger) {
 				} else {
 					window.ApplicationData.Ack = InteractiveSocket.COMM_SUCCESS
 					_ = InteractiveSocket.COMM_SENDJSON(&window.ApplicationData, conn)
-					if err := server.State.UpdateNodeDataState(InteractiveSocket.Node{}, true, false, 0, UPDATE_ALL); err != nil {
+					if err := server.State.UpdateNodeDataState(InteractiveSocket.Node{Identity: window.Identity}, true, false, 0, UPDATE_ALL); err != nil {
 						perr.Println(err)
 					}
 				}
