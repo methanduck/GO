@@ -9,7 +9,8 @@ import (
 	"log"
 	"net"
 	"os"
-	"strings"
+	"runtime"
+	"time"
 )
 
 const (
@@ -22,6 +23,13 @@ type Server struct {
 	SVR_Port string
 	Pinfo    *log.Logger
 	PErr     *log.Logger
+}
+
+func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	err := Start()
+	log.Println(err)
 }
 
 //Start Serer
@@ -50,16 +58,14 @@ func Start() error {
 		} else {
 			//수신 시
 			go func() {
-				if err := SERVER.afterConnected(connection, SERVER.PErr); err != nil {
-					SERVER.PErr.Println("Error occured (Err code : %s", err)
-				}
+				SERVER.afterConnected(connection, SERVER.PErr)
 			}()
 		}
 
 	}
 }
 
-func (server Server) afterConnected(conn net.Conn, perr *log.Logger) error {
+func (server Server) afterConnected(conn net.Conn, perr *log.Logger) {
 	//Json 해석된 result struct
 	result, err := InteractiveSocket.COMM_RECVJSON(conn)
 	if err != nil {
@@ -68,35 +74,46 @@ func (server Server) afterConnected(conn net.Conn, perr *log.Logger) error {
 	switch result.Which {
 	//Application
 	case true:
-		status, err := server.State.IsOnline(result.Identity)
+		status, err := server.State.IsExistAndIsOnline(result.Identity)
 		if err != nil {
 			server.Pinfo.Println("Send Ack : ERR")
 			if err := InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.COMM_ERR}, conn); err != nil {
 				server.PErr.Println("Failed to send JSON")
 			}
 		}
-		if status {
-			_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.STATE_OFFLINE}, conn) //ERR처리 무시함
-		} else {
-			//ONLINE일 경우
-			waiting := 1
-			if err := server.State.ApplicationNodeUpdate(result, waiting); err != nil {
-				if err.Error() == NOTAVAILABLE {
-					_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.COMM_ERR}, conn) //ERR처리 무시함
-				}
+		if !status { //서버에서 offline일 경우 조종이 불가하여 offline응답을 전송
+			_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.STATE_OFFLINE}, conn)
+		} else { //online확인
+			if err := server.State.UpdateNodeDataState(result, false, true, 1, UPDATE_REQCONN); err != nil {
+				perr.Println(err)
+				_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: err.Error()}, conn) //TODO : 오류 종류에 대한 처리 없이 오류 사항을 그대로 전송중
 			}
-			for {
-				if waiting == 3 {
-
+			if result.Oper == "INFO" {
+				time.Sleep(3 * time.Second)
+				window := server.State.GetNodeData(result.Identity)
+				window.ApplicationData.Ack = InteractiveSocket.COMM_SUCCESS
+				_ = InteractiveSocket.COMM_SENDJSON(&window.ApplicationData, conn)
+				if err := server.State.UpdateNodeDataState(InteractiveSocket.Node{}, true, false, 0, UPDATE_ALL); err != nil {
+					perr.Println(err)
 				}
 			}
 
 		}
-
 	//Window
+	//창문의 경우 한번이라도 신호를 보내오면 온라인 연결 간주, 대기중인 명령이 있는지 확인 후 명령 처리 및 응답
 	case false:
-
+		switch result.Oper {
+		case "INFO":
+			if err := server.State.UpdateNodeDataState(result, true, false, 1, UPDATE_ALL); err != nil {
+				perr.Println(err)
+			}
+		case "ONLINE": //주기적 수신
+			if err := server.State.UpdataOnline(result); err != nil {
+				perr.Println(err)
+			}
+		}
+		if err := server.State.UpdataOnline(result); err != nil {
+			perr.Println(err)
+		}
 	}
-	addrParse := strings.Split(conn.RemoteAddr().String(), ":")
-
 }

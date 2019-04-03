@@ -11,11 +11,15 @@ import (
 )
 
 const (
-	ONLINE       = true
-	OFFLINE      = false
-	NOTAVAILABLE = "N/A"
+	ONLINE        = true
+	OFFLINE       = false
+	NOTAVAILABLE  = "N/A"
 	ERRPROCESSING = "PSERR"
-	BUCKET_NODE  = "NODE"
+	BUCKET_NODE   = "NODE"
+	//update options
+	UPDATE_ONLIE   = 0
+	UPDATE_REQCONN = 1
+	UPDATE_ALL     = 2
 )
 
 type dbData struct {
@@ -29,12 +33,14 @@ type NodeState struct {
 	IsOnline        bool
 	IsRequireConn   bool
 	ApplicationData InteractiveSocket.Node
-	Locking         int
+	Locking         int //TODO : embedded locking 전환 필요
 }
+
 //기본적으로 온라인인 상태로 리턴
-func NodeStateMaker(data InteractiveSocket.Node,state NodeState) NodeState {
-	return NodeState{ApplicationData:data,Identity:data.Identity,IsOnline:ONLINE,IsRequireConn:state.IsRequireConn,Locking:0}
+func NodeStateMaker(data InteractiveSocket.Node, state NodeState) NodeState {
+	return NodeState{ApplicationData: data, Identity: data.Identity, IsOnline: ONLINE, IsRequireConn: state.IsRequireConn, Locking: 0}
 }
+
 //Starting BoltDB
 //서버초기화에 실패 시 서버가 비정상 종료됩니다.
 //Bucket : State, Node
@@ -65,9 +71,11 @@ func (db dbData) Startbolt(pinfo *log.Logger, perr *log.Logger) *bolt.DB {
 	}
 	return boltdb
 }
+
 //노드가 존재하는지 확인하고 존재한다면, 온라인 상태를 반환합니다.
 //error : 데이터가 존재하지 않습니다, 데이터 처리중 오류가 발생했습니다.
-func (db dbData) IsExistAndIsOnline(identity string) (bool,error) {
+//bool : 온라인이든 아니든 리턴이 이뤄질 경우 등록은 되어있는것으로 판단 가능
+func (db dbData) IsExistAndIsOnline(identity string) (bool, error) {
 	var isOnline bool
 	tempNodeState := NodeState{}
 	if err := db.database.View(func(tx *bolt.Tx) error {
@@ -76,157 +84,174 @@ func (db dbData) IsExistAndIsOnline(identity string) (bool,error) {
 		if len(val) == 0 {
 			return fmt.Errorf(NOTAVAILABLE)
 		}
-		if err :=json.Unmarshal(val,tempNodeState); err != nil {
+		if err := json.Unmarshal(val, tempNodeState); err != nil {
 			return fmt.Errorf("BOLT : failed to unmarshal")
 		}
 		isOnline = tempNodeState.IsOnline
 		return nil
 	}); err != nil {
 		if err.Error() == NOTAVAILABLE {
-			return false,errors.New(NOTAVAILABLE)
+			return false, errors.New(NOTAVAILABLE)
 		}
-		return false,errors.New(ERRPROCESSING)
+		return false, errors.New(ERRPROCESSING)
 	} else {
-		return isOnline,nil
+		return isOnline, nil
 	}
 }
+func (db dbData) IsRequireConn(identity string) (res bool, resErr error) {
+	if err := db.database.View(func(tx *bolt.Tx) error {
+		var tmp_NodeState NodeState
+		bucket := tx.Bucket([]byte(BUCKET_NODE))
+		val := bucket.Get([]byte(identity))
+		if len(val) == 0 {
+			res = false
+			resErr = errors.New("BOLT : Data not found")
+		}
+		_ = json.Unmarshal(val, tmp_NodeState) //에러 처리 안함
+		res = tmp_NodeState.IsOnline
+		resErr = nil
+		return nil
+	}); err != nil {
+		return
+	}
+	return
+}
+func (db dbData) GetNodeData(identity string) NodeState {
+
+}
+
 //Update the Node "State" as Online
 func (db dbData) UpdataOnline(data InteractiveSocket.Node) error {
-	var temp_NodeState NodeState
 	var val []byte
-	isOnline,isExist := db.IsExistAndIsOnline(data.Identity)
-	//노드가 데이터베이스에 존재하는지 확인
-	//노드가 데이터베이스에 존재 할 때
-	if isExist {
+	_, err := db.IsExistAndIsOnline(data.Identity)
+	if err != nil { //err리턴 시 데이터가 존재하지 않거나 marshal 에러 발생
+		temp_NodeState := NodeState{}
+		if err := db.database.Update(func(tx *bolt.Tx) error {
+			temp_NodeState.ApplicationData = data
+			temp_NodeState.IsOnline = true
+			temp_NodeState.Identity = data.Identity
+
+			bucket := tx.Bucket([]byte(BUCKET_NODE))
+			val, _ = json.Marshal(temp_NodeState)
+			if err := bucket.Put([]byte(data.Identity), val); err != nil {
+				return errors.New("BOLT : Failed to put data")
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
+	} else { //리턴이 존재하므로 데이터는 존재함
+		var temp_NodeState NodeState
 		if err := db.database.Update(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket([]byte(BUCKET_NODE))
 			val = bucket.Get([]byte(data.Identity))
-			if err := json.Unmarshal(val,&temp_NodeState); err != nil {
+			if err := json.Unmarshal(val, &temp_NodeState); err != nil {
 				return fmt.Errorf("BOLT : Failed to unmarshal")
 			}
 			//Modify state
 			temp_NodeState.IsOnline = true
 			//marshalling
-			val,err := json.Marshal(temp_NodeState)
-			if err != nil {return fmt.Errorf("BOLT : Failed to marshal")}
+			val, err := json.Marshal(temp_NodeState)
+			if err != nil {
+				return fmt.Errorf("BOLT : Failed to marshal")
+			}
 			//Update Node
-			if err := bucket.Put([]byte(data.Identity),val); err != nil {
+			if err := bucket.Put([]byte(data.Identity), val); err != nil {
 				fmt.Println("BOLT : Failed to update NodeState")
 			}
 			return nil
 		}); err != nil {
 			return err
 		}
-		return nil
-	} else { //Node not exist
-		if err := db.database.Update(func(tx *bolt.Tx) error {
-			temp_NodeState.ApplicationData = data
-			temp_NodeState.
-			bucket := tx.Bucket([]byte(BUCKET_NODE))
-			val, _ = json.Marshal(temp_NodeState)
-
-		}); err != nil {
-
-		}
 	}
+	return nil
 }
+
 //Update the Node data
-func (db dbData) UpdateNodeData(data *InteractiveSocket.Node)  {
-
-}
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-func (db dbData)
-
-func (db dbData) ApplicationNodeUpdate(data InteractiveSocket.Node, locking int) error {
-	db.pInfo.Println("BOLT : Commence application request update ")
-	state, err := db.GetWindowData(data.Identity)
-	if err != nil {
-		db.PErr.Println("BOLT : Failed (ERR code :" + err.Error() + ")")
-		return err
-	}
-	state.ApplicationData = data
-	state.Locking = locking
-	if err := db.Update(state); err != nil {
-		db.PErr.Println("BOLT : Failed (ERR code :" + err.Error() + ")")
-		return err
+func (db dbData) UpdateNodeDataState(data InteractiveSocket.Node, isOnline bool, isRequireConn bool, lock int, opts int) error {
+	tmpNodeState := NodeState{}
+	var val []byte
+	if _, err := db.IsExistAndIsOnline(data.Identity); err != nil { //데이터가 존재하지 않을경우
+		tmpNodeState.Identity = data.Identity
+		tmpNodeState.IsOnline = isOnline
+		tmpNodeState.IsRequireConn = isRequireConn
+		tmpNodeState.Locking = lock
+		if val, err := json.Marshal(tmpNodeState); err != nil {
+			return errors.New("BOLT : Failed to marshal")
+		} else {
+			if err := db.database.Update(func(tx *bolt.Tx) error {
+				bucket := tx.Bucket([]byte(BUCKET_NODE))
+				if err := bucket.Put([]byte(data.Identity), val); err != nil {
+					return errors.New("BOLT : Failed to put data")
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
+		}
+	} else { //데이터가 존재할 경우
+		var tmp_NodeState NodeState
+		if err := db.database.View(func(tx *bolt.Tx) error {
+			bucket := tx.Bucket([]byte(BUCKET_NODE))
+			val = bucket.Get([]byte(data.Identity))
+			_ = json.Unmarshal(val, tmp_NodeState) //에러 처리 하지 않음
+			if tmp_NodeState.Locking == 1 {
+				return errors.New("BOLT : Resource N/A")
+			}
+			switch opts {
+			case UPDATE_ALL:
+				tmp_NodeState.IsOnline = isOnline
+				tmp_NodeState.IsRequireConn = isRequireConn
+				tmp_NodeState.Locking = lock
+			case UPDATE_ONLIE:
+				tmp_NodeState.IsOnline = isOnline
+			case UPDATE_REQCONN:
+				tmp_NodeState.IsRequireConn = isRequireConn
+			}
+			val, _ = json.Marshal(tmp_NodeState) //에러 처리 하지 않음
+			if err := bucket.Put([]byte(data.Identity), val); err != nil {
+				return errors.New("BOLT : faile to update data")
+			}
+			return nil
+		}); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (db dbData) Update(data NodeState) error {
-	db.pInfo.Println("BOLT : Commence window request update")
+//Reset default state //default isOnline = false , isReqConn = false
+func (db dbData) ResetState(identity string, isonline bool, isreqConn bool, lock int) error {
+	tmpNodeState := db.GetNodeData(identity)
+	if isonline {
+		tmpNodeState.IsOnline = true
+	} else {
+		tmpNodeState.IsOnline = false
+	}
+	if isreqConn {
+		tmpNodeState.IsRequireConn = true
+	} else {
+		tmpNodeState.IsRequireConn = false
+	}
+	if lock == 1 {
+		tmpNodeState.Locking = 1
+	} else {
+		tmpNodeState.Locking = 0
+	}
+	tmpNodeState.ApplicationData = InteractiveSocket.Node{}
+	//put resetted struct
 	if err := db.database.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte("Node"))
-		var put_Temp []byte
-		var err error
-		if put_Temp, err = json.Marshal(data); err != nil {
-			return fmt.Errorf(data.Identity)
-		}
-		if err = bucket.Put([]byte(data.Identity), put_Temp); err != nil {
-			return fmt.Errorf(data.Identity + ",put error")
+		bucket := tx.Bucket([]byte(BUCKET_NODE))
+		if val, err := json.Marshal(tmpNodeState); err != nil {
+			return errors.New("BOLT : Marshal failed")
+		} else {
+			if err := bucket.Put([]byte(identity), val); err != nil {
+				return errors.New("BOLT : Put failed")
+			}
 		}
 		return nil
 	}); err != nil {
-		return fmt.Errorf("Failed to update window request")
+		return err
 	}
-
 	return nil
-}
-/*
-//Check the window is online 0 : OFFLINE 1 : ONLINE
-func (db dbData) IsOnline(key string) (bool, error) {
-	db.pInfo.Println("BOLT : State query initiated")
-	var state_Temp NodeState
-
-	if err := db.database.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte("Node"))
-		data := bucket.Get([]byte(key))
-		if err := json.Unmarshal(data, &state_Temp); err != nil {
-			db.PErr.Println("BOLT : Unmarshal failed")
-			return fmt.Errorf("Unmarshal failed")
-		}
-		return nil
-	}); err != nil {
-		return false, err
-	}
-	return state_Temp.IsOnline, nil
-}
-*/
-func (db dbData) IsRequest(key string) (bool, error) {
-	db.pInfo.Println("BOLT : State req query initiated")
-	var state_Temp NodeState
-
-	if err := db.database.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte("Node"))
-		data := bucket.Get([]byte(key))
-		if err := json.Unmarshal(data, &state_Temp); err != nil {
-			db.PErr.Println("BOLT ; Unmarshal failed")
-			return fmt.Errorf("Unmarshal failed")
-		}
-		return nil
-	}); err != nil {
-		return false, err
-	}
-	return state_Temp.IsRequireConn, nil
-}
-
-func (db dbData) GetWindowData(key string) (NodeState, error) {
-	db.pInfo.Println("BOLT : Getting state query")
-	var node NodeState
-
-	if err := db.database.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte("Node"))
-		data := bucket.Get([]byte(key))
-		if data == nil {
-			return fmt.Errorf(NOTAVAILABLE)
-		}
-		if err := json.Unmarshal(data, &node); err != nil {
-			return fmt.Errorf("Unmarshal failed")
-		}
-		return nil
-	}); err != nil {
-		return NodeState{}, err
-	}
-
-	return node, nil
 }

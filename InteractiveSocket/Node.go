@@ -27,7 +27,8 @@ const (
 	MODE_VALIDATION       = "VALIDATION"
 	POS_PASSWORD          = 0
 	POS_HOSTNAME          = 1
-	STATE_OFFLINE         = 0
+	STATE_OFFLINE         = "OFFLINE"
+	STATE_ONLINE          = "ONLINE"
 )
 
 type Node struct {
@@ -38,7 +39,7 @@ type Node struct {
 	Identity    string      `json:"Identity"`    //중복되는 IP에서도 창문을 구별 할 수 있음
 	ModeAuto    bool        `json:"ModeAuto"`    //자동 모드 설정
 	ModeProxy   bool        `json:"mode_proxy"`
-	Oper        string      `json:"Oper"`     // "OPEN", "CLOSE", "CONF"
+	Oper        string      `json:"Oper"`     // "OPEN", "CLOSE", "CONF", "INFO"  // 창문 : "INFO", "ONLINE"
 	Ack         interface{} `json:"Ack"`      // "OK", "COMM_SUCCESS", "TRUE", "FAIL", "FALSE", "OFFLINE"
 	Temp        int         `json:"Temp"`     // temperature
 	Humidity    int         `json:"Humidity"` // Humidity
