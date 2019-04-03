@@ -1,4 +1,4 @@
-package InteractiveSocket
+package main
 
 import (
 	"bytes"
