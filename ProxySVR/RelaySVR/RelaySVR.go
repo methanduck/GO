@@ -88,16 +88,20 @@ func (server Server) afterConnected(conn net.Conn, perr *log.Logger) {
 				perr.Println(err)
 				_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: err.Error()}, conn) //TODO : 오류 종류에 대한 처리 없이 오류 사항을 그대로 전송중
 			}
-			if result.Oper == "INFO" {
+			switch result.Oper {
+			case "INFO": //TODO : 재수정 필요
 				time.Sleep(3 * time.Second)
-				window := server.State.GetNodeData(result.Identity)
-				window.ApplicationData.Ack = InteractiveSocket.COMM_SUCCESS
-				_ = InteractiveSocket.COMM_SENDJSON(&window.ApplicationData, conn)
-				if err := server.State.UpdateNodeDataState(InteractiveSocket.Node{}, true, false, 0, UPDATE_ALL); err != nil {
+				if window, err := server.State.GetNodeData(result.Identity); err != nil {
 					perr.Println(err)
+				} else {
+					window.ApplicationData.Ack = InteractiveSocket.COMM_SUCCESS
+					_ = InteractiveSocket.COMM_SENDJSON(&window.ApplicationData, conn)
+					if err := server.State.UpdateNodeDataState(InteractiveSocket.Node{}, true, false, 0, UPDATE_ALL); err != nil {
+						perr.Println(err)
+					}
 				}
-			}
 
+			}
 		}
 	//Window
 	//창문의 경우 한번이라도 신호를 보내오면 온라인 연결 간주, 대기중인 명령이 있는지 확인 후 명령 처리 및 응답
