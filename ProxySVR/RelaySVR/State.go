@@ -30,6 +30,7 @@ type dbData struct {
 
 type NodeState struct {
 	Identity        string
+	lastLogin       time.Time //TODO : 온라인 여부를 타임스탬프 계산으로 확인 할 수 있도록 전환 필요
 	IsOnline        bool
 	IsRequireConn   bool
 	ApplicationData InteractiveSocket.Node
@@ -239,7 +240,11 @@ func (db dbData) UpdateNodeDataState(data InteractiveSocket.Node, isOnline bool,
 
 //Reset default state //default isOnline = false , isReqConn = false
 func (db dbData) ResetState(identity string, isonline bool, isreqConn bool, lock int) error {
-	tmpNodeState := db.GetNodeData(identity)
+	tmpNodeState, err := db.GetNodeData(identity)
+	if err != nil {
+		return err
+	}
+
 	if isonline {
 		tmpNodeState.IsOnline = true
 	} else {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"runtime"
 
 	//"hash/adler32"
 	"io"
@@ -268,4 +269,11 @@ func (win *Window) Start() int {
 			}
 		}()
 	}
+}
+
+func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	localServer := Window{}
+	localServer.Start()
 }
