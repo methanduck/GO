@@ -88,6 +88,7 @@ func (server Server) afterConnected(conn net.Conn, perr *log.Logger) {
 				perr.Println(err)
 				_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: err.Error()}, conn) //TODO : 오류 종류에 대한 처리 없이 오류 사항을 그대로 전송중
 			}
+
 			switch result.Oper {
 			case "INFO": //TODO : 재수정 필요
 				time.Sleep(3 * time.Second)
@@ -96,10 +97,11 @@ func (server Server) afterConnected(conn net.Conn, perr *log.Logger) {
 				} else {
 					window.ApplicationData.Ack = InteractiveSocket.COMM_SUCCESS
 					_ = InteractiveSocket.COMM_SENDJSON(&window.ApplicationData, conn)
-					if err := server.State.UpdateNodeDataState(InteractiveSocket.Node{}, true, false, 0, UPDATE_ALL); err != nil {
+					if err := server.State.ResetState(result.Identity, true, false, 0); err != nil {
 						perr.Println(err)
 					}
 				}
+			default:
 
 			}
 		}
