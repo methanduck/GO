@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"runtime"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	//"hash/adler32"
 	"io"
@@ -21,13 +24,16 @@ import (
 const (
 	//서버 포트
 	SVRLISTENINGPORT = "6866"
+	//중계서버 IP
+	RELAYSVRIPADDR = "210.125.31.153:6866"
 )
 
 type Window struct {
-	PInfo     *log.Logger
-	PErr      *log.Logger
-	svrInfo   *Node
-	Available *sync.Mutex
+	PInfo      *log.Logger
+	PErr       *log.Logger
+	svrInfo    *Node
+	Available  *sync.Mutex
+	quitSIGNAL chan os.Signal
 }
 
 //VALIDATION 성공 : "LOGEDIN" 실패 : "ERR"
@@ -122,7 +128,78 @@ func (win *Window) afterConnected(Android net.Conn, node *Node) {
 	_ = Android.Close()
 }
 
+func (win *Window) updateToRelaySVR() {
+	win.quitSIGNAL = make(chan os.Signal, 1)
+	go func() {
+	loop:
+		for {
+			sig := <-win.quitSIGNAL
+			switch sig {
+			case syscall.SIGTERM:
+				break loop
+
+			default:
+				conn, err := net.Dial("TCP", RELAYSVRIPADDR)
+				if err != nil {
+					win.PErr.Println("connection err with relaySVR: " + err.Error())
+				}
+				time.Sleep(2 * time.Second)
+				_ = COMM_SENDJSON(&Node{Oper: STATE_ONLINE}, conn)
+				inNode, err := COMM_RECVJSON(conn)
+				if err == nil {
+					win.RelayOperation(inNode, win.svrInfo)
+				}
+			}
+		}
+	}()
+}
+
+func (win *Window) close_updateToRelaySVR() {
+	win.PInfo.Println("RelaySVR communication is now ineffect")
+	signal.Notify(win.quitSIGNAL, syscall.SIGTERM)
+}
+
+func (win *Window) RelayOperation(reqNode Node, SvrNode *Node) {
+
+}
+
+func (win *Window) SocketOperation(Android net.Conn, SvrNode *Node) {
+	for {
+		AndroidNode, err := COMM_RECVJSON(Android)
+		if err != nil {
+			break
+		}
+		result := win.Operation(AndroidNode, SvrNode)
+		_ = COMM_SENDJSON(&result, Android)
+	}
+
+}
+
 //창문 명령
+func (win *Window) Operation(order Node, svrNode *Node) Node {
+	switch order.Oper {
+	case OPERATION_OPEN:
+
+		return Node{Ack: COMM_SUCCESS}
+	case OPERATION_CLOSE:
+
+		return Node{Ack: COMM_SUCCESS}
+	case OPERATION_INFORMATION:
+		//TODO : 센서값 모두 파싱
+		return Node{}
+	case OPERATION_MODEAUTO:
+		svrNode.ModeAuto = order.ModeAuto
+		return Node{Ack: COMM_SUCCESS}
+	case OPERATION_PROXY:
+		svrNode.ModeProxy = order.ModeProxy
+		return Node{Ack: COMM_SUCCESS}
+	default:
+		win.PErr.Println("Not available operation argument ")
+	}
+	return Node{Ack: COMM_FAIL}
+}
+
+//창문 명령 ***deprecated***
 func (win *Window) Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) {
 	//TODO: Error 조건이 센서에 있다면 Error 추가하기
 	isBreak := false
@@ -269,11 +346,4 @@ func (win *Window) Start() int {
 			}
 		}()
 	}
-}
-
-func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
-	localServer := Window{}
-	localServer.Start()
 }

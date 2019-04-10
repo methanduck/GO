@@ -65,6 +65,7 @@ func Start() error {
 	}
 }
 
+//통신이 수립되었을 때 수행하는 함수
 func (server Server) afterConnected(conn net.Conn, perr *log.Logger) {
 	//Json 해석된 result struct
 	result, err := InteractiveSocket.COMM_RECVJSON(conn)
