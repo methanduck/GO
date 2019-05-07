@@ -29,7 +29,9 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	err := Start()
-	log.Println(err)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 //Start Serer
