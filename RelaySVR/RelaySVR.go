@@ -111,7 +111,7 @@ func (server Server) afterConnected(conn net.Conn, perr *log.Logger) {
 		}
 	//Window
 	//창문의 경우 한번이라도 신호를 보내오면 온라인 연결 간주, 대기중인 명령이 있는지 확인 후 명령 처리 및 응답
-	case false:
+	case false:``
 		switch result.Oper {
 		case "INFO":
 			if err := server.State.UpdateNodeDataState(result, true, false, 1, UPDATE_ALL); err != nil {
