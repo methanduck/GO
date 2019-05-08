@@ -9,7 +9,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"runtime"
 	"time"
 )
 
@@ -24,15 +23,6 @@ type Server struct {
 	Pinfo    *log.Logger
 	PErr     *log.Logger
 	// ctx		 context.Context TODO Context 추가 여부 검토
-}
-
-func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
-	err := Start()
-	if err != nil {
-		log.Println(err)
-	}
 }
 
 //Start Serer
@@ -54,7 +44,7 @@ func Start() error {
 			SERVER.PErr.Panic("Abnormal termination while closing server")
 		}
 	}()
-
+	//TODO: database trash cleaner
 	go func() {
 
 	}()

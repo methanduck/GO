@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os"
-	"strings"
 )
 
 const (
@@ -36,15 +37,15 @@ type Node struct {
 	Initialized bool        `json:"Initialized"` //TODO: 바로 인증 전송
 	PassWord    string      `json:"PassWord"`    //창문 비밀번호
 	IPAddr      string      `json:"IPAddr"`      //TODO: 항목 검토필요
-	Identity    string      `json:"Identity"`    //중복되는 IP에서도 창문을 구별 할 수 있음
+	Identity    string      `json:"Identity"`    //중복되는 IP에서도 창문을 구별 할 수 있음 , md5로 해싱되어 저장됌
 	ModeAuto    bool        `json:"ModeAuto"`    //자동 모드 설정
-	ModeProxy   bool        `json:"mode_proxy"`
-	Oper        string      `json:"Oper"`     // "OPEN", "CLOSE", "CONF", "INFO"  // 창문 : "INFO", "ONLINE"
-	Ack         interface{} `json:"Ack"`      // "OK", "COMM_SUCCESS", "TRUE", "FAIL", "FALSE", "OFFLINE"
-	Temp        int         `json:"Temp"`     // temperature
-	Humidity    int         `json:"Humidity"` // Humidity
-	Gas         int         `json:"Gas"`      // Gas
-	Light       int         `json:"Light"`    // Light
+	ModeProxy   bool        `json:"mode_proxy"`  //중계서버 연결 설정
+	Oper        string      `json:"Oper"`        // "OPEN", "CLOSE", "CONF", "INFO"  // 창문 : "INFO", "ONLINE"
+	Ack         interface{} `json:"Ack"`         // "OK", "COMM_SUCCESS", "TRUE", "FAIL", "FALSE", "OFFLINE"
+	Temp        int         `json:"Temp"`        // temperature
+	Humidity    int         `json:"Humidity"`    // Humidity
+	Gas         int         `json:"Gas"`         // Gas
+	Light       int         `json:"Light"`       // Light
 }
 
 func (node *Node) Authentication(input *Node) error {
@@ -58,27 +59,84 @@ func (node *Node) Authentication(input *Node) error {
 func (node *Node) HashValidation(passwd string, operation string) error {
 	hashfunc := md5.New()
 	switch operation {
+	//Passwd set
 	case MODE_PASSWDCONFIG:
 		hashfunc.Write([]byte(passwd))
 		node.PassWord = hex.EncodeToString(hashfunc.Sum(nil))
+	//Passwd validation
 	case MODE_VALIDATION:
 		hashfunc.Write([]byte(passwd))
 		if node.PassWord != hex.EncodeToString(hashfunc.Sum(nil)) {
-			return fmt.Errorf("ERR!! Password validation failed")
+			return errors.New("Validation fail")
 		}
 	}
 	return nil
 }
 
 //Identity 설정
-func (node *Node) SetIdentity() error {
+func (node *Node) SetIdentity() {
 	hashfunc := md5.New()
 	addr := node.GetMacAddr()
 	hashfunc.Write([]byte(addr))
 	node.Identity = hex.EncodeToString(hashfunc.Sum(nil))
-	return fmt.Errorf("Failed to set identity")
+	if node.Identity == "" {
+		panic("Failed to set identity")
+	}
 }
 
+func (node *Node) FILE_LOAD() error {
+	fileInfo, err := os.Stat(FILENAME)
+	if err != nil {
+		return errors.New("File not found")
+	}
+	if file, err := os.OpenFile(FILENAME, os.O_RDWR|os.O_TRUNC, os.FileMode(0644)); err != nil {
+		return errors.New("File load fail")
+	} else {
+		data := make([]byte, fileInfo.Size())
+		if _, err := file.Read(data); err != nil {
+			return errors.New("File read fail")
+		}
+		var tmpNode Node
+		_ = json.Unmarshal(data, tmpNode)
+		node.DATA_INITIALIZER(tmpNode, true)
+	}
+	return nil
+}
+
+func (node *Node) FILE_FLUSH() error {
+	byted, _ := json.Marshal(node)
+	if file, err := os.OpenFile(FILENAME, os.O_RDWR|os.O_TRUNC, os.FileMode(0644)); err != nil {
+		return errors.New("File write fail")
+	} else {
+		defer func() {
+			_ = file.Close()
+		}()
+		if _, err := file.Write(byted); err != nil {
+			return errors.New("File write fail")
+		}
+	}
+	return nil
+}
+
+func (node *Node) FILE_INITIALIZE() error {
+	if _, err := os.Stat(FILENAME); err != nil {
+		file, err := os.OpenFile(FILENAME, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.FileMode(0644))
+		if err != nil {
+			return errors.New("File open fail")
+		}
+		defer func() {
+			_ = file.Close()
+		}()
+		node.DATA_INITIALIZER(Node{}, false)
+	} else {
+		if err := node.FILE_LOAD(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+/*
 //파일 확인 및 생성
 func (node *Node) FILE_INITIALIZE() (bool, error) {
 	if _, infoerr := os.Stat(FILENAME); infoerr != nil {
@@ -109,7 +167,7 @@ func (node *Node) FILE_INITIALIZE() (bool, error) {
 	return true, nil
 
 }
-
+/*  ****deprecated****
 //파일 출력
 func (node *Node) FILE_WRITE(data string) error {
 	dataFile, err := os.OpenFile(FILENAME, os.O_RDWR|os.O_TRUNC, os.FileMode(0644))
@@ -139,19 +197,29 @@ func (node *Node) FILE_FLUSH() error {
 	err := node.FILE_WRITE(node.PassWord + ";" + node.Identity)
 	return err
 }
+*/
 
 //입력된 구조체의 값을 적용
 //mode false; 모든 자료 초기화 true ; 자동화 설정 위함
 func (node *Node) DATA_INITIALIZER(inputData Node, mode bool) {
-	node.Initialized = true
-	node.PassWord = inputData.PassWord
-	node.Identity = inputData.Identity
-	node.ModeAuto = inputData.ModeAuto
-	node.Oper = inputData.Oper
-	node.Temp = inputData.Temp
-	node.Humidity = inputData.Humidity
-	node.Gas = inputData.Gas
-	node.Light = inputData.Light
+	if mode {
+		//들어온 구조체의 값을 통해 초기화
+		node.Initialized = true
+		node.PassWord = inputData.PassWord
+		node.ModeAuto = inputData.ModeAuto
+	} else {
+		//기본 초기화
+		node.Initialized = false
+		node.PassWord = "0000"
+		node.SetIdentity()
+		node.ModeAuto = false
+		node.Oper = ""
+		node.Temp = 0
+		node.Humidity = 0
+		node.Gas = 0
+		node.Light = 0
+	}
+
 }
 
 //Mac addr 수집

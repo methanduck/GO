@@ -25,7 +25,7 @@ const (
 	//서버 포트
 	SVRLISTENINGPORT = "6866"
 	//중계서버 IP
-	RELAYSVRIPADDR = "210.125.31.153:6866"
+	RELAYSVRIPADDR = "127.0.0.1:6866"
 )
 
 type Window struct {
@@ -33,22 +33,22 @@ type Window struct {
 	PErr       *log.Logger
 	svrInfo    *Node
 	Available  *sync.Mutex
+	FAvailable *sync.Mutex
 	quitSIGNAL chan os.Signal
 }
 
 //VALIDATION 성공 : "LOGEDIN" 실패 : "ERR"
 //각 인자의 구분자 ";"
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  1. 초기화 되지 않은 노드에 접속 시 Initialized = false 전송 (json)
-//  2. 안드로이드는 false 수신 시 설정 값을 json으로 전송 이 때 json Oper 항목에 창문 수행 명령이 있을경우 바로 수행
-//  3. 수행명령이 존재하지 않을 경우 값을 파일로 쓰고 안드로이드로 "OK" 를 json 으로 전송함
-//
-// 1-1. 초기화 된 노드에 접속시 Initialized = true 전송 (json)
-// 2-1. 안드로이드는 true 수신 시 창문에 validation과 동시에 명령을 수행시키기 위해 창문으로 수행 명령 (JSON) Oper항목에 명령을 담아 전송
-// 2-2. 창문에서 validation 수행 실패 시 "ERR"를 json으로 전송하고 validation 수행 성공 시 Operations 로 넘어가 창문을 조작
-// 3-1. 수행이 종료되면 "OK"를 json으로 전송
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//TODO: 해결됌(Operations을 계속 실행함)
+//  1. 초기화 되지 않은 노드에 접속 시 Initialized = false 전송 (json)																				//
+//  2. 안드로이드는 false 수신 시 설정 값을 json으로 전송 이 때 json Oper 항목에 창문 수행 명령이 있을경우 바로 수행								//
+//  3. 수행명령이 존재하지 않을 경우 값을 파일로 쓰고 안드로이드로 "OK" 를 json 으로 전송함															//
+//																																					//
+// 1-1. 초기화 된 노드에 접속시 Initialized = true 전송 (json)																						//
+// 2-1. 안드로이드는 true 수신 시 창문에 validation과 동시에 명령을 수행시키기 위해 창문으로 수행 명령 (JSON) Oper항목에 명령을 담아 전송			//
+// 2-2. 창문에서 validation 수행 실패 시 "ERR"를 json으로 전송하고 validation 수행 성공 시 Operations 로 넘어가 창문을 조작							//
+// 3-1. 수행이 종료되면 "OK"를 json으로 전송																										//
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 func (win *Window) afterConnected(Android net.Conn, node *Node) {
 	//자격증명이 설정되어 있지 않아 자격증명 초기화 시
 	if node.PassWord == "" {
@@ -63,13 +63,65 @@ func (win *Window) afterConnected(Android net.Conn, node *Node) {
 			log.Print(err.Error())
 		}
 
+		//가독성 위해 switch구문 사용
+		//지속적인 연결을 위한 operation 함수를 반복하지 않음
+		switch win.svrInfo.Initialized {
+		//초기화된 경우
+		case true:
+			//자격증명 수행
+			if err := win.svrInfo.HashValidation(recvData.PassWord, MODE_VALIDATION); err != nil {
+				_ = COMM_SENDJSON(&Node{Ack: "FAIL"}, Android)
+			} else {
+				//자격증명 성공시 명령 수행
+				win.Available.Lock()
+				result := win.Operation(recvData, node)
+				_ = COMM_SENDJSON(&result, Android)
+				win.Available.Unlock()
+			}
+		//초기화 되지 않은 경우
+		case false:
+			//비밀번호를 설정하기 이전 창문 확인을 위해 명령이 수신될 경우
+			if recvData.PassWord == "" {
+				result := win.Operation(recvData, node)
+				_ = COMM_SENDJSON(&result, Android)
+			} else {
+				//수신된 비밀번호를 설정하되 다중 입력이 들어올 경우 race condition이 발생하므로
+				// 1. 가장 먼저 자료를 송신한 app
+				// 		+ 파일 설정의 lock을 획득 및 램에 적재된 node객체의 initialized = true로 설정 다른 app의 접근을 제한
+				//		+ 송신한 객체에 Oper 자료가 존재하면 해당 명령을 창문에 수행함
+				// 2. 이후 늦게 자료를 송신한 app
+				// 		+ 파일 설정의 lock을 획득하기 이전 node객체의 initialized = true로 인해 FAIL 수신
+				//		+ app입장에서는 연결이 종료되고 다시 창문에 접근해야함(자격증명)
+				if win.svrInfo.Initialized {
+					win.PErr.Println("Already initialized")
+					_ = COMM_SENDJSON(&Node{Ack: "FAIL"}, Android)
+					return
+				}
+				win.FAvailable.Lock()
+				win.svrInfo.DATA_INITIALIZER(recvData, true)
+				if err := win.svrInfo.FILE_FLUSH(); err != nil {
+					win.PErr.Println(err)
+				}
+				if recvData.Oper != "" {
+					result := win.Operation(recvData, node)
+					_ = COMM_SENDJSON(&result, Android)
+				}
+				win.FAvailable.Unlock()
+			}
+		}
+
 		//들어온 json에 창문 명령이 존재 할 경우
-		//TODO: 창문에 계정 설정을 먼저 할 지 개폐 먼저 할지 결정
 		//TODO: if 구문 정리 필요
 		if recvData.Oper != "" {
 			win.Available.Lock()
+			result := win.Operation(recvData, node)
+			_ = COMM_SENDJSON(&result, Android)
+
+			/* 반복적인 창문 여닫는 명령 수행구문 ****deprecated**** TODO: 지속적인 명령을 수신하여 수행할지 검토 필요
 			win.Operations(Android, &recvData, node)
 			_ = COMM_SENDJSON(&Node{Ack: COMM_SUCCESS}, Android)
+			*/
+
 			win.Available.Unlock()
 			return
 		} else {
@@ -199,7 +251,7 @@ func (win *Window) Operation(order Node, svrNode *Node) Node {
 	return Node{Ack: COMM_FAIL}
 }
 
-//창문 명령 ***deprecated***
+//창문 명령
 func (win *Window) Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node) {
 	//TODO: Error 조건이 센서에 있다면 Error 추가하기
 	isBreak := false
@@ -304,19 +356,17 @@ func EXEC_COMMAND(comm string) string {
 
 //프로그램 시작부
 func (win *Window) Start() int {
-	//변수선언
-	var initerr error
 	win.Available = new(sync.Mutex)
+	win.FAvailable = new(sync.Mutex)
 	//구조체 객체 선언
 	win.svrInfo = new(Node)
-	_, initerr = win.svrInfo.FILE_INITIALIZE()
-	//빈 파일을 불러오거나 파일을 읽기에 실패했을 경우
-	if initerr != nil {
-		fmt.Println(initerr)
+	if err := win.svrInfo.FILE_INITIALIZE(); err != nil {
+		win.PErr.Println(err)
+	} else {
+		win.PInfo.Println("File loaded")
 	}
 
-	//Start Socket Server
-	Android, err := net.Listen("tcp", ":"+SVRLISTENINGPORT)
+	Android, err := net.Listen("tcp", RELAYSVRIPADDR)
 	if err != nil {
 		log.Print("COMM_SVR : ERR Socket Open FAIL")
 		return 1
