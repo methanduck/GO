@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="cd7fa305-8b38-4b09-861e-84e8b5ad9d59" name="Default Changelist" comment="update">
+    <list default="true" id="cd7fa305-8b38-4b09-861e-84e8b5ad9d59" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/ProxySVR/RelaySVR/Context.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ProxySVR/RelaySVR/RelaySVR.go" beforeDir="false" afterPath="$PROJECT_DIR$/ProxySVR/RelaySVR/RelaySVR.go" afterDir="false" />
     </list>
@@ -16,8 +17,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/ProxySVR/RelaySVR/RelaySVR.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="286">
-              <caret line="23" column="24" lean-forward="true" selection-start-line="23" selection-start-column="24" selection-end-line="23" selection-end-column="24" />
+            <state relative-caret-position="-888">
+              <caret line="62" column="20" selection-start-line="62" selection-start-column="20" selection-end-line="62" selection-end-column="20" />
               <folding>
                 <element signature="e#43#135#0" expanded="true" />
               </folding>
@@ -26,10 +27,19 @@
         </entry>
       </file>
       <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/ProxySVR/RelaySVR/Context.go">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="19">
+              <caret line="1" lean-forward="true" selection-start-line="1" selection-end-line="1" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/ProxySVR/RelaySVR/State.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1330">
-              <caret line="78" column="67" selection-start-line="78" selection-start-column="67" selection-end-line="78" selection-end-column="67" />
+            <state relative-caret-position="1768">
+              <caret line="76" column="38" selection-start-line="76" selection-start-column="38" selection-end-line="76" selection-end-column="38" />
               <folding>
                 <element signature="n#!!block;n#IsExistAndIsOnline#0" />
                 <element signature="n#!!block;n#IsRequireConn#0" />
@@ -124,11 +134,12 @@
         <option value="$PROJECT_DIR$/InteractiveSocket/Node.go" />
         <option value="$PROJECT_DIR$/InteractiveSocket/Starter/main.go" />
         <option value="$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go" />
+        <option value="$PROJECT_DIR$/ProxySVR/RelaySVR/Context.go" />
         <option value="$PROJECT_DIR$/ProxySVR/RelaySVR/RelaySVR.go" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="579" />
     <option name="y" value="130" />
     <option name="width" value="1936" />
@@ -225,10 +236,10 @@
     </recent_temporary>
   </component>
   <component name="ToolWindowManager">
-    <frame x="579" y="130" width="1936" height="1407" extended-state="0" />
+    <frame x="-8" y="-8" width="3456" height="1416" extended-state="6" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.21908316" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.121024735" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -243,7 +254,7 @@
       <window_info anchor="bottom" id="Version Control" order="9" weight="0.32761312" />
       <window_info anchor="bottom" id="Terminal" order="10" />
       <window_info anchor="bottom" id="Event Log" order="11" side_tool="true" />
-      <window_info anchor="bottom" id="Messages" order="12" weight="0.15396701" />
+      <window_info anchor="bottom" id="Messages" order="12" visible="true" weight="0.15288612" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -260,21 +271,6 @@
   </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/ProxySVR/main/main.go" />
-    <entry file="file://$PROJECT_DIR$/ProxySVR/RelaySVR/State.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1330">
-          <caret line="78" column="67" selection-start-line="78" selection-start-column="67" selection-end-line="78" selection-end-column="67" />
-          <folding>
-            <element signature="n#!!block;n#IsExistAndIsOnline#0" />
-            <element signature="n#!!block;n#IsRequireConn#0" />
-            <element signature="n#!!block;n#GetNodeData#0" />
-            <element signature="n#!!block;n#UpdataOnline#0" />
-            <element signature="n#!!block;n#UpdateNodeDataState#0" />
-            <element signature="n#!!block;n#ResetState#0" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/InteractiveSocket/Node.go">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="323">
@@ -314,10 +310,32 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/ProxySVR/RelaySVR/State.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1768">
+          <caret line="76" column="38" selection-start-line="76" selection-start-column="38" selection-end-line="76" selection-end-column="38" />
+          <folding>
+            <element signature="n#!!block;n#IsExistAndIsOnline#0" />
+            <element signature="n#!!block;n#IsRequireConn#0" />
+            <element signature="n#!!block;n#GetNodeData#0" />
+            <element signature="n#!!block;n#UpdataOnline#0" />
+            <element signature="n#!!block;n#UpdateNodeDataState#0" />
+            <element signature="n#!!block;n#ResetState#0" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/ProxySVR/RelaySVR/Context.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="19">
+          <caret line="1" lean-forward="true" selection-start-line="1" selection-end-line="1" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/ProxySVR/RelaySVR/RelaySVR.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="286">
-          <caret line="23" column="24" lean-forward="true" selection-start-line="23" selection-start-column="24" selection-end-line="23" selection-end-column="24" />
+        <state relative-caret-position="-888">
+          <caret line="62" column="20" selection-start-line="62" selection-start-column="20" selection-end-line="62" selection-end-column="20" />
           <folding>
             <element signature="e#43#135#0" expanded="true" />
           </folding>
