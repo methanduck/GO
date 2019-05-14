@@ -36,7 +36,7 @@ func Start() error {
 	SERVER.PErr = log.New(os.Stdout, red("ERR :"), log.LstdFlags)
 	//bolt database initializing
 	SERVER.State = new(dbData)
-	SERVER.State.Startbolt(SERVER.Pinfo, SERVER.PErr)
+	go SERVER.State.Startbolt(SERVER.Pinfo, SERVER.PErr)
 	Listener, err := net.Listen("tcp", SERVER.SVR_Addr+":"+SERVER.SVR_Port)
 	if err != nil {
 		SERVER.PErr.Panic("Failed to open server (Err code : %s ", err)
