@@ -5,6 +5,7 @@ package RelaySVR
 
 import (
 	"flag"
+	"github.com/fatih/color"
 	"github.com/methanduck/GO/InteractiveSocket"
 	"log"
 	"net"
@@ -30,15 +31,19 @@ func Start() error {
 	Server_port := flag.String("port", Service_port, "Server Port")
 	Server_Addr := flag.String("addr", "127.0.0.1", "Server Addr")
 	SERVER := Server{SVR_Addr: *Server_Addr, SVR_Port: *Server_port}
+	red := color.New(color.FgRed).SprintFunc()
 	SERVER.Pinfo = log.New(os.Stdout, "INFO :", log.LstdFlags)
-	SERVER.PErr = log.New(os.Stdout, "ERR :", log.LstdFlags)
+	SERVER.PErr = log.New(os.Stdout, red("ERR :"), log.LstdFlags)
 	//bolt database initializing
 	SERVER.State = new(dbData)
 	SERVER.State.Startbolt(SERVER.Pinfo, SERVER.PErr)
 	Listener, err := net.Listen("tcp", SERVER.SVR_Addr+":"+SERVER.SVR_Port)
 	if err != nil {
 		SERVER.PErr.Panic("Failed to open server (Err code : %s ", err)
+	} else {
+		SERVER.Pinfo.Println("Relay server initiated " + *Server_Addr + ":" + *Server_port)
 	}
+
 	defer func() {
 		if err := Listener.Close(); err != nil {
 			SERVER.PErr.Panic("Abnormal termination while closing server")
