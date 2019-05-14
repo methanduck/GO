@@ -5,7 +5,7 @@ package RelaySVR
 
 import (
 	"flag"
-	"github.com/GO/InteractiveSocket"
+	"github.com/methanduck/GO/InteractiveSocket"
 	"log"
 	"net"
 	"os"

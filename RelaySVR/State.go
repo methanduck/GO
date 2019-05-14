@@ -3,8 +3,8 @@ package RelaySVR
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/GO/InteractiveSocket"
 	"github.com/boltdb/bolt"
+	"github.com/methanduck/GO/InteractiveSocket"
 	"github.com/pkg/errors"
 	"log"
 	"time"

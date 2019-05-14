@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/GO/RelaySVR"
+	"github.com/methanduck/GO/RelaySVR"
 	"log"
 	"runtime"
 )
