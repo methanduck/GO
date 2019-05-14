@@ -4,9 +4,8 @@
 package RelaySVR
 
 import (
-	"flag"
 	"github.com/fatih/color"
-//	"github.com/glendc/go-external-ip"
+	//	"github.com/glendc/go-external-ip"
 	"github.com/methanduck/GO/InteractiveSocket"
 	"log"
 	"net"
@@ -37,23 +36,23 @@ func Start(address string, port string) error {
 		log.Println("ERR : failed to get external ip address")
 	}
 	*/
-	var addr string
-	var portbind int
-	if (address == "") {
+	var SVR_ADDR string
+	var SVR_PORT string
+	if address == "" {
 		addrs, err := net.InterfaceAddrs()
 		if err != nil {
 			log.Println("ERR : failed to get local addr")
 		}
-		addr = addrs[0].String()
+		SVR_ADDR = addrs[len(addrs)].String()
 	} else {
-		addr = address
+		SVR_ADDR = address
 	}
-	if (port != "") {
-		portbind = port
+	if port != "0" {
+		SVR_PORT = port
 	} else {
-		portbind = Service_port
+		SVR_PORT = Service_port
 	}
-	SERVER := Server{SVR_Addr: addr, SVR_Port: portbind}
+	SERVER := Server{SVR_Addr: SVR_ADDR, SVR_Port: SVR_PORT}
 	SERVER.Pinfo = log.New(os.Stdout, "INFO :", log.LstdFlags)
 	SERVER.PErr = log.New(os.Stdout, red("ERR :"), log.LstdFlags)
 	//bolt database initializing
@@ -63,7 +62,7 @@ func Start(address string, port string) error {
 	if err != nil {
 		SERVER.PErr.Panic("Failed to open server (Err code : %s ", err)
 	} else {
-		SERVER.Pinfo.Println("Relay server initiated " + *Server_Addr + ":" + *Server_port)
+		SERVER.Pinfo.Println("Relay server initiated " + SVR_ADDR + ":" + SVR_PORT)
 	}
 
 	defer func() {
