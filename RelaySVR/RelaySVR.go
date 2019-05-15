@@ -38,7 +38,7 @@ func Start(address string, port string) error {
 	}
 	*/
 	var addr string
-	var portbind string
+	var portbind int
 	if (address == "") {
 		addrs, err := net.InterfaceAddrs()
 		if err != nil {
