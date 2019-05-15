@@ -7,7 +7,7 @@ import (
 	"flag"
 	"github.com/fatih/color"
 	"github.com/glendc/go-external-ip"
-	"github.com/methanduck/GO/InteractiveSocket"
+//	"github.com/methanduck/GO/InteractiveSocket"
 	"log"
 	"net"
 	"os"
