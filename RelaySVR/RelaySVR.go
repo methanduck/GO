@@ -28,10 +28,8 @@ type Server struct {
 }
 
 //Start Serer
-func Start() error {
+func Start(address string, port string) error {
 	red := color.New(color.FgRed).SprintFunc()
-	Server_port := flag.String("port", Service_port, "Server Port")
-	Server_Addr := flag.String("addr", "127.0.0.1", "Server Addr")
 	/* 외부 IP를 얻는데 사용되는 코드 ****deprecated****
 	consensus := externalip.DefaultConsensus(nil, nil)
 	ip, err := consensus.ExternalIP()
@@ -39,13 +37,23 @@ func Start() error {
 		log.Println("ERR : failed to get external ip address")
 	}
 	*/
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		log.Println("ERR : failed to get local addr")
+	var addr string
+	var portbind string
+	if (address == "") {
+		addrs, err := net.InterfaceAddrs()
+		if err != nil {
+			log.Println("ERR : failed to get local addr")
+		}
+		addr = addrs[0].String()
+	} else {
+		addr = address
 	}
-	addr := addrs[0].String()
-	Server_Addr = &addr
-	SERVER := Server{SVR_Addr: *Server_Addr, SVR_Port: *Server_port}
+	if (port != "") {
+		portbind = port
+	} else {
+		portbind = Service_port
+	}
+	SERVER := Server{SVR_Addr: addr, SVR_Port: portbind}
 	SERVER.Pinfo = log.New(os.Stdout, "INFO :", log.LstdFlags)
 	SERVER.PErr = log.New(os.Stdout, red("ERR :"), log.LstdFlags)
 	//bolt database initializing
