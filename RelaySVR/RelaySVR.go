@@ -6,6 +6,7 @@ package RelaySVR
 import (
 	"flag"
 	"github.com/fatih/color"
+	"github.com/glendc/go-external-ip"
 	"github.com/methanduck/GO/InteractiveSocket"
 	"log"
 	"net"
@@ -28,8 +29,14 @@ type Server struct {
 
 //Start Serer
 func Start() error {
+	consensus := externalip.DefaultConsensus(nil, nil)
+	ip, err := consensus.ExternalIP()
+	if err != nil {
+		log.Println("ERR : failed to get external ip address")
+	}
+	log.Println()
 	Server_port := flag.String("port", Service_port, "Server Port")
-	Server_Addr := flag.String("addr", "127.0.0.1", "Server Addr")
+	Server_Addr := flag.String("addr", ip.String(), "Server Addr")
 	SERVER := Server{SVR_Addr: *Server_Addr, SVR_Port: *Server_port}
 	red := color.New(color.FgRed).SprintFunc()
 	SERVER.Pinfo = log.New(os.Stdout, "INFO :", log.LstdFlags)
