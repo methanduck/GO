@@ -14,9 +14,12 @@ func main() {
 	if string(addr) == "" {
 		addr = []byte("127.0.0.1")
 	}
-	Address := flag.String("addr", string(addr), "")
+
+	address := flag.String("addr", string(addr), "Set listening address")
+	port := flag.String("port", InteractiveSocket.SVRLISTENINGPORT, "Set listening port")
+
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	localServer := InteractiveSocket.Window{}
-	localServer.Start()
+	localServer.Start(*address, *port)
 }
