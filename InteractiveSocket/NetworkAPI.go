@@ -370,7 +370,7 @@ func (win *Window) Start(address string, port string) int {
 		win.PErr.Println("failed to open socket")
 		return 1
 	} else {
-		win.PInfo.Println("Socket server initialized")
+		win.PInfo.Println("Socket server initialized Addr = " + address + ":" + port)
 	}
 	defer func() {
 		err := Android.Close()
