@@ -4,20 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/fatih/color"
+	"io"
 	"log"
+	"net"
 	"os"
+	"os/exec"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
-
-	//"hash/adler32"
-	"io"
-	"net"
-	"os/exec"
-	//"strings"
-
-	//"strings"
-	"sync"
 )
 
 //고정 변수
@@ -131,9 +127,9 @@ func (win *Window) afterConnected(Android net.Conn, node *Node) {
 				//들어온 json에 창문 명령이 존재하지 않을 경우
 				node.DATA_INITIALIZER(recvData, false)
 				if node.Initialized {
-					fmt.Println("SocketSVR Configuration Succeeded")
+					win.PInfo.Println("Socket server successfully configured (DATA_INITIALIZER)")
 				} else {
-					fmt.Println("COMM_SVR : SocketSVR failed to init")
+					win.PInfo.Println("Socket server configuration failed(DATA_INITIALIZER)")
 					return
 				}
 
@@ -142,12 +138,12 @@ func (win *Window) afterConnected(Android net.Conn, node *Node) {
 				fileLock.Lock()
 				err = node.FILE_FLUSH()
 				if err != nil {
-					fmt.Println("COMM_SVR : SocketSVR failed to flush")
+					win.PErr.Println("Socket server failed to flush (FILE_FLUSH)")
 					_ = COMM_SENDJSON(&Node{Ack: "SmartWindow failed to write, reboot please"}, Android)
 					return
 				}
 				fileLock.Unlock()
-				fmt.Println("SocketSVR FILE write Succeeded")
+				win.PInfo.Println("Socket server file write succeeded (FILE_FLUSH)")
 				_ = COMM_SENDJSON(&Node{Ack: "OK"}, Android)
 			}
 		}
@@ -176,7 +172,7 @@ func (win *Window) afterConnected(Android net.Conn, node *Node) {
 		_ = COMM_SENDJSON(&Node{Ack: COMM_SUCCESS}, Android)
 		win.Available.Unlock()
 	}
-	fmt.Println("SocketSVR Connection terminated with :" + Android.RemoteAddr().String())
+	win.PInfo.Println("Socket server connection terminated with :" + Android.RemoteAddr().String())
 	_ = Android.Close()
 }
 
@@ -206,7 +202,7 @@ func (win *Window) updateToRelaySVR() {
 	}()
 }
 
-func (win *Window) close_updateToRelaySVR() {
+func (win *Window) close_updateToRerlaySVR() {
 	win.PInfo.Println("RelaySVR communication is now ineffect")
 	signal.Notify(win.quitSIGNAL, syscall.SIGTERM)
 }
@@ -260,21 +256,21 @@ func (win *Window) Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node
 	for {
 		switch AndroidNode.Oper {
 		case OPERATION_OPEN:
-			fmt.Println("COMM_SVR : INFO command open execudted")
+			win.PInfo.Println("Socket server executed command : OPEN")
 			COMM_SENDJSON(&Node{Ack: COMM_SUCCESS}, Android)
 		case OPERATION_CLOSE:
-			fmt.Println("COMM_SVR : INFO command close executed")
+			win.PInfo.Println("Socet server executed command : CLOSE")
 		case OPERATION_INFORMATION:
 			// sensorData ;= EXEC_COMMAND("") TODO : 모든 센서 값 출력하는 쉘 절대경로 작성 및 센서별 입력순서 파악
 			//splitedData := strings.Split(sensorData,",")
-			fmt.Println("COMM_SVR : INFO command info executed")
+			win.PInfo.Println("Socket server executed command : INFO")
 		case OPERATION_MODEAUTO:
 			if AndroidNode.ModeAuto {
 				SvrNode.ModeAuto = true
-				fmt.Print("COMM_SVR : INFO WINDOW_MODE_AUTO=TRUE")
+				win.PInfo.Println("Socket server executed command : WINDOW_MODE_AUTO=TRUE")
 			} else {
 				SvrNode.ModeAuto = false
-				fmt.Print("COMM_SVR : INFO WINDOW_MODE_AUTO=FALSE")
+				win.PInfo.Println("Socket server executed command : WINDOW_MODE_AUTO=FALSE")
 			}
 		case OPERATION_PROXY:
 			SvrNode.ModeProxy = AndroidNode.ModeProxy
@@ -284,7 +280,7 @@ func (win *Window) Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node
 			break
 
 		default:
-			log.Print("COMM_SVR : ERR! Received not compatible command / func Operations")
+			win.PErr.Println("Socket server received not compatible command (OPER)")
 		}
 		if isBreak {
 			break
@@ -299,7 +295,7 @@ func (win *Window) Operations(Android net.Conn, AndroidNode *Node, SvrNode *Node
 func COMM_SENDMSG(msg string, Android net.Conn) error {
 	_, err := Android.Write([]byte(msg))
 	if err != nil {
-		return fmt.Errorf("COMM_SVR : SocketSVR failed to send message")
+		return fmt.Errorf("SocketSVR failed to send message")
 	}
 	return nil
 }
@@ -346,53 +342,56 @@ func COMM_RECVJSON(android net.Conn) (res Node, err error) {
 }
 
 //OS 명령 실행
-func EXEC_COMMAND(comm string) string {
+func (win *Window) EXEC_COMMAND(comm string) string {
 	out, err := exec.Command("/bin/bash", "-c", comm).Output()
 	if err != nil {
-		fmt.Println("COMM_SVR : SocketSVR Failed to run command")
+		win.PInfo.Println("Socket server failed to run command")
 	}
 	return string(out)
 }
 
 //프로그램 시작부
 func (win *Window) Start() int {
+	//구조체 객체 선언
+	win.svrInfo = &Node{}
+	win.PErr = log.New(os.Stdout, color.RedString("ERR : "), log.LstdFlags)
+	win.PInfo = log.New(os.Stdout, "INFO : ", log.LstdFlags)
 	win.Available = new(sync.Mutex)
 	win.FAvailable = new(sync.Mutex)
-	//구조체 객체 선언
-	win.svrInfo = new(Node)
+
 	if err := win.svrInfo.FILE_INITIALIZE(); err != nil {
 		win.PErr.Println(err)
 	} else {
 		win.PInfo.Println("File loaded")
 	}
 
-	Android, err := net.Listen("tcp", RELAYSVRIPADDR)
+	Android, err := net.Listen("tcp", "192.168.0.22:6866")
 	if err != nil {
-		log.Print("COMM_SVR : ERR Socket Open FAIL")
+		win.PErr.Println("failed to open socket")
 		return 1
 	} else {
-		log.Print("COMM_SVR : INFO Socket Open Succedded")
+		win.PInfo.Println("Socket server initialized")
 	}
 	defer func() {
 		err := Android.Close()
 		if err != nil {
-			log.Print("COMM_SVR: ERR Socket server terminated abnormaly " + Android.Addr().String())
+			win.PErr.Println("Socket server terminated abnormaly" + Android.Addr().String())
 		}
 	}()
 
 	for {
 		connect, err := Android.Accept()
 		if err != nil {
-			fmt.Println("COMM_SVR : SocketSVR TCP CONN FAIL")
+			win.PErr.Println("Socket server failed to connect TCP with :" + connect.RemoteAddr().String())
 		} else {
-			fmt.Println("SocketSVR TCP CONN Succeeded : " + connect.RemoteAddr().String())
+			win.PInfo.Println("Socket server successfully TCP connected with :" + connect.RemoteAddr().String())
 			//start go routine
 			go win.afterConnected(connect, win.svrInfo)
 		}
 		defer func() {
 			err := connect.Close()
 			if err != nil {
-				log.Print("COMM_SVR: ERR! client connection terminated abnormaly " + Android.Addr().String())
+				win.PErr.Println("Socket server connection terminated abnormaly with client :" + Android.Addr().String())
 			}
 		}()
 	}

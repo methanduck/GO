@@ -2,7 +2,7 @@ package main
 
 import "runtime"
 import (
-	"github.com/GO/InteractiveSocket"
+	"github.com/methanduck/GO/InteractiveSocket"
 )
 
 func main() {
