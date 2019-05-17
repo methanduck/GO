@@ -18,6 +18,7 @@ func main() {
 	address := flag.String("addr", string(addr), "Set listening address")
 	port := flag.String("port", InteractiveSocket.SVRLISTENINGPORT, "Set listening port")
 
+	flag.Parse()
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	localServer := InteractiveSocket.Window{}
