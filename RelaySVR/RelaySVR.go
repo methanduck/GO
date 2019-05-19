@@ -58,7 +58,7 @@ func (server *Server) Start(address string, port string) error {
 		} else {
 			//수신 시
 			go func() {
-				server.afterConnected(connection, server.PErr)
+				server.afterConnected(connection)
 			}()
 		}
 
@@ -66,12 +66,12 @@ func (server *Server) Start(address string, port string) error {
 }
 
 //통신이 수립되었을 때 수행하는 함수
-func (server Server) afterConnected(conn net.Conn, perr *log.Logger) {
+func (server Server) afterConnected(conn net.Conn) {
 
 	//Json 해석된 result struct
 	result, err := InteractiveSocket.COMM_RECVJSON(conn)
 	if err != nil {
-		perr.Println(err)
+		server.PErr.Println(err)
 	}
 	switch result.Which {
 	//Application
@@ -86,42 +86,65 @@ func (server Server) afterConnected(conn net.Conn, perr *log.Logger) {
 		if !status { //서버에서 offline일 경우 조종이 불가하여 offline응답을 전송
 			_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.STATE_OFFLINE}, conn)
 		} else { //online확인
-			if err := server.State.UpdateNodeDataState(result, false, true, 1, UPDATE_REQCONN); err != nil {
-				perr.Println(err)
+			if err := server.State.UpdateNodeDataState(result, false, true, 1, UPDATE_APPREQCONN); err != nil {
+				server.PErr.Println(err)
 				_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: err.Error()}, conn) //TODO : 오류 종류에 대한 처리 없이 오류 사항을 그대로 전송중
 			}
-
+			//어플리케이션 명령 처리
 			switch result.Oper {
-			case "INFO": //TODO : 재수정 필요
+			case InteractiveSocket.OPERATION_INFORMATION:
 				time.Sleep(3 * time.Second)
 				if window, err := server.State.GetNodeData(result.Identity); err != nil {
-					perr.Println(err)
+					server.PErr.Println(err)
 				} else {
 					window.ApplicationData.Ack = InteractiveSocket.COMM_SUCCESS
 					_ = InteractiveSocket.COMM_SENDJSON(&window.ApplicationData, conn)
 					if err := server.State.ResetState(result.Identity, true, false, 0); err != nil {
-						perr.Println(err)
+						server.PErr.Println(err)
 					}
 				}
-			default:
+			case InteractiveSocket.OPERATION_OPEN, InteractiveSocket.OPERATION_CLOSE, InteractiveSocket.OPERATION_PROXY, InteractiveSocket.OPERATION_MODEAUTO:
+				window, _ := server.State.GetNodeData(result.Identity)
+				if window.Locking == 1 {
+					_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.COMM_ERR}, conn)
+				} else {
+					_ = server.State.UpdateNodeDataState(result, false, true, 1, UPDATE_APPREQCONN)
+				}
 
+			default:
+				_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.COMM_ERR}, conn)
+				server.PErr.Println("Received N/A command")
 			}
 		}
 	//Window
 	//창문의 경우 한번이라도 신호를 보내오면 온라인 연결 간주, 대기중인 명령이 있는지 확인 후 명령 처리 및 응답
 	case false:
-		switch result.Oper {
-		case "INFO":
-			if err := server.State.UpdateNodeDataState(result, true, false, 1, UPDATE_ALL); err != nil {
-				perr.Println(err)
-			}
-		case "ONLINE": //주기적 수신
-			if err := server.State.UpdataOnline(result); err != nil {
-				perr.Println(err)
-			}
+		isconn, err := server.State.IsRequireConn(result.Identity, "towindow")
+		if err != nil {
+			_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.COMM_FAIL}, conn)
 		}
-		if err := server.State.UpdataOnline(result); err != nil {
-			perr.Println(err)
+		switch result.Oper {
+		case InteractiveSocket.OPERATION_INFORMATION:
+			if err := server.State.UpdateNodeDataState(result, true, false, 1, UPDATE_ALL); err != nil {
+				server.PErr.Println(err)
+			}
+		case InteractiveSocket.STATE_ONLINE: //주기적 수신
+			if err := server.State.UpdataOnline(result); err != nil {
+				server.PErr.Println(err)
+			} else {
+				blue := color.New(color.BgBlue).SprintfFunc()
+				server.Pinfo.Println(blue("Widow state updated (window :" + result.Identity + ", state : online"))
+				if isconn {
+					data, _ := server.State.GetNodeData(result.Identity)
+					_ = InteractiveSocket.COMM_SENDJSON(&data.ApplicationData, conn)
+					_ = server.State.UpdateNodeDataState(result, false, false, 0, UPDATE_APPREQCONN)
+				} else {
+					_ = InteractiveSocket.COMM_SENDJSON(&InteractiveSocket.Node{Ack: InteractiveSocket.COMM_SUCCESS}, conn)
+				}
+			}
+
+		default:
+			server.PErr.Println("Received N/A command")
 		}
 	}
 }

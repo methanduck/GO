@@ -17,9 +17,10 @@ const (
 	ERRPROCESSING = "PSERR"
 	BUCKET_NODE   = "NODE"
 	//update options
-	UPDATE_ONLIE   = 0
-	UPDATE_REQCONN = 1
-	UPDATE_ALL     = 2
+	UPDATE_ONLIE      = 0
+	UPDATE_APPREQCONN = 1
+	UPDATE_WINREQCONN = 2
+	UPDATE_ALL        = 3
 )
 
 type dbData struct {
@@ -29,17 +30,18 @@ type dbData struct {
 }
 
 type NodeState struct {
-	Identity        string
-	lastLogin       time.Time //TODO : 온라인 여부를 타임스탬프 계산으로 확인 할 수 있도록 전환 필요
-	IsOnline        bool
-	IsRequireConn   bool
-	ApplicationData InteractiveSocket.Node
-	Locking         int //TODO : embedded locking 전환 필요
+	Identity         string
+	lastLogin        time.Time //TODO : 온라인 여부를 타임스탬프 계산으로 확인 할 수 있도록 전환 필요
+	IsOnline         bool
+	IsWinRequireconn bool
+	IsAppRequireconn bool
+	ApplicationData  InteractiveSocket.Node
+	Locking          int //TODO : embedded locking 전환 필요
 }
 
 //기본적으로 온라인인 상태로 리턴
 func NodeStateMaker(data InteractiveSocket.Node, state NodeState) NodeState {
-	return NodeState{ApplicationData: data, Identity: data.Identity, IsOnline: ONLINE, IsRequireConn: state.IsRequireConn, Locking: 0}
+	return NodeState{ApplicationData: data, Identity: data.Identity, IsOnline: ONLINE, IsWinRequireconn: state.IsWinRequireconn, Locking: 0}
 }
 
 //Starting BoltDB
@@ -100,7 +102,11 @@ func (db dbData) IsExistAndIsOnline(identity string) (bool, error) {
 	}
 }
 
-func (db dbData) IsRequireConn(identity string) (res bool, resErr error) {
+//해당하는 창문에 대한 명령 요청이 존재하는지 확인합니다.
+// mode는 창문 또는 어플리케이션이 전달할 내용이 존재하는지 표현합니다.
+//명령의 요청 여부는 res (bool)
+//해당하는 창문이 데이터베이스에 존재하지 않으면 error를 반환합니다.
+func (db dbData) IsRequireConn(identity string, mode string) (res bool, resErr error) {
 	if err := db.database.View(func(tx *bolt.Tx) error {
 		var tmp_NodeState NodeState
 		bucket := tx.Bucket([]byte(BUCKET_NODE))
@@ -110,7 +116,12 @@ func (db dbData) IsRequireConn(identity string) (res bool, resErr error) {
 			resErr = errors.New("BOLT : Data not found")
 		}
 		_ = json.Unmarshal(val, tmp_NodeState) //에러 처리 안함
-		res = tmp_NodeState.IsOnline
+		switch mode {
+		case "toapplication":
+			res = tmp_NodeState.IsWinRequireconn
+		case "towindow":
+			res = tmp_NodeState.IsAppRequireconn
+		}
 		resErr = nil
 		return nil
 	}); err != nil {
@@ -192,7 +203,7 @@ func (db dbData) UpdateNodeDataState(data InteractiveSocket.Node, isOnline bool,
 	if _, err := db.IsExistAndIsOnline(data.Identity); err != nil { //데이터가 존재하지 않을경우
 		tmpNodeState.Identity = data.Identity
 		tmpNodeState.IsOnline = isOnline
-		tmpNodeState.IsRequireConn = isRequireConn
+		tmpNodeState.IsWinRequireconn = isRequireConn
 		tmpNodeState.Locking = lock
 		if val, err := json.Marshal(&tmpNodeState); err != nil {
 			return errors.New("BOLT : Failed to marshal")
@@ -218,18 +229,29 @@ func (db dbData) UpdateNodeDataState(data InteractiveSocket.Node, isOnline bool,
 			}
 			switch opts {
 			case UPDATE_ALL:
+				tmp_NodeState.ApplicationData = data
 				tmp_NodeState.IsOnline = isOnline
-				tmp_NodeState.IsRequireConn = isRequireConn
+				tmp_NodeState.IsWinRequireconn = isRequireConn
 				tmp_NodeState.Locking = lock
 			case UPDATE_ONLIE:
 				tmp_NodeState.IsOnline = isOnline
-			case UPDATE_REQCONN:
-				tmp_NodeState.IsRequireConn = isRequireConn
+			case UPDATE_APPREQCONN:
+				tmp_NodeState.IsAppRequireconn = isRequireConn
+				if isRequireConn {
+					tmpNodeState.ApplicationData = data
+				}
+			case UPDATE_WINREQCONN:
+				tmpNodeState.IsWinRequireconn = isRequireConn
+				if isRequireConn {
+					tmpNodeState.ApplicationData = data
+				}
 			}
+
 			val, _ = json.Marshal(&tmp_NodeState) //에러 처리 하지 않음
 			if err := bucket.Put([]byte(data.Identity), val); err != nil {
 				return errors.New("BOLT : faile to update data")
 			}
+			db.pInfo.Println("BOLT : successfully update data (window :" + data.Identity + "command :" + data.Oper + ")")
 			return nil
 		}); err != nil {
 			return err
@@ -251,9 +273,9 @@ func (db dbData) ResetState(identity string, isonline bool, isreqConn bool, lock
 		tmpNodeState.IsOnline = false
 	}
 	if isreqConn {
-		tmpNodeState.IsRequireConn = true
+		tmpNodeState.IsWinRequireconn = true
 	} else {
-		tmpNodeState.IsRequireConn = false
+		tmpNodeState.IsWinRequireconn = false
 	}
 	if lock == 1 {
 		tmpNodeState.Locking = 1
