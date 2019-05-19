@@ -226,8 +226,9 @@ func (node *Node) DATA_INITIALIZER(inputData Node, mode bool) {
 }
 
 //Mac addr 수집
-func (node *Node) GetMacAddr() (addr string) {
+func (node *Node) GetMacAddr() string {
 	interfaces, err := net.Interfaces()
+	var addr string
 	if err == nil {
 		for _, i := range interfaces {
 			if i.Flags&net.FlagUp != 0 && bytes.Compare(i.HardwareAddr, nil) != 0 {
@@ -236,9 +237,10 @@ func (node *Node) GetMacAddr() (addr string) {
 			}
 		}
 	}
-	return
+	return addr
 }
 
 func (node *Node) PrintData() {
-	fmt.Println(json.Marshal(node))
+	tmp, _ := json.Marshal(node)
+	fmt.Println(string(tmp))
 }
