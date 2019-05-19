@@ -209,7 +209,7 @@ func (node *Node) DATA_INITIALIZER(inputData Node, mode bool) {
 	if mode {
 		//들어온 구조체의 값을 통해 초기화
 		node.Initialized = true
-		node.PassWord = inputData.PassWord
+		_ = node.HashValidation(inputData.PassWord, MODE_PASSWDCONFIG)
 		node.ModeAuto = inputData.ModeAuto
 	} else {
 		//기본 초기화
