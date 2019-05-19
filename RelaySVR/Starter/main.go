@@ -1,9 +1,11 @@
 package main
 
 import (
+	"github.com/fatih/color"
 	"github.com/methanduck/GO/RelaySVR"
 	"log"
 	"os"
+	"os/exec"
 	"runtime"
 )
 
@@ -15,8 +17,26 @@ func main() {
 	*/
 	address := os.Getenv("serverwindow")
 	port := os.Getenv("serverport")
-	err := RelaySVR.Start(address, port)
-	if err != nil {
-		log.Println(err)
+
+	if address == "" {
+		addr, err := exec.Command("/bash/sh", "-c", "awk 'END{print $1}' /etc/hosts").Output()
+		if err != nil {
+			red := color.New(color.FgRed).SprintFunc()
+			log.Println(red("ERROR!! Relay server failed to get address or port!!"))
+			log.Panic(red("Aborting initialize" + err.Error()))
+
+		}
+		if err := run(string(addr), port); err != nil {
+			red := color.New(color.FgRed).SprintFunc()
+			log.Panic(red("Stop running" + err.Error()))
+		}
 	}
+}
+
+func run(address string, port string) error {
+	server := new(RelaySVR.Server)
+	if err := server.Start(address, port); err != nil {
+		return err
+	}
+	return nil
 }

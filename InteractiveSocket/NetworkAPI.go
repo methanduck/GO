@@ -351,7 +351,7 @@ func (win *Window) EXEC_COMMAND(comm string) string {
 }
 
 //프로그램 시작부
-func (win *Window) Start(address string, port string) int {
+func (win *Window) Start(address string, port string) error {
 	//구조체 객체 선언
 	win.svrInfo = &Node{}
 	win.PErr = log.New(os.Stdout, color.RedString("ERR : "), log.LstdFlags)
@@ -368,9 +368,9 @@ func (win *Window) Start(address string, port string) int {
 	Android, err := net.Listen("tcp", address+":"+port)
 	if err != nil {
 		win.PErr.Println("failed to open socket")
-		return 1
+		return err
 	} else {
-		win.PInfo.Println("Socket server initialized Addr = " + address + ":" + port)
+		win.PInfo.Println("Socket server initialized = " + address + ":" + port)
 	}
 
 	defer func() {

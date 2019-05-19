@@ -27,47 +27,24 @@ type Server struct {
 }
 
 //Start Serer
-func Start(address string, port string) error {
+func (server *Server) Start(address string, port string) error {
 	red := color.New(color.FgRed).SprintFunc()
-	/* 외부 IP를 얻는데 사용되는 코드 ****deprecated****
-	consensus := externalip.DefaultConsensus(nil, nil)
-	ip, err := consensus.ExternalIP()
-	if err != nil {
-		log.Println("ERR : failed to get external ip address")
-	}
-	*/
-	var SVR_ADDR string
-	var SVR_PORT string
-	if address == "" {
-		addrs, err := net.InterfaceAddrs()
-		if err != nil {
-			log.Println("ERR : failed to get local addr")
-		}
-		SVR_ADDR = addrs[len(addrs)].String()
-	} else {
-		SVR_ADDR = address
-	}
-	if port != "0" {
-		SVR_PORT = port
-	} else {
-		SVR_PORT = Service_port
-	}
-	SERVER := Server{SVR_Addr: SVR_ADDR, SVR_Port: SVR_PORT}
-	SERVER.Pinfo = log.New(os.Stdout, "INFO :", log.LstdFlags)
-	SERVER.PErr = log.New(os.Stdout, red("ERR :"), log.LstdFlags)
+	server.Pinfo = log.New(os.Stdout, "INFO :", log.LstdFlags)
+	server.PErr = log.New(os.Stdout, red("ERR :"), log.LstdFlags)
+
 	//bolt database initializing
-	SERVER.State = new(dbData)
-	go SERVER.State.Startbolt(SERVER.Pinfo, SERVER.PErr)
-	Listener, err := net.Listen("tcp", SERVER.SVR_Addr+":"+SERVER.SVR_Port)
+	server.State = new(dbData)
+	go server.State.Startbolt(server.Pinfo, server.PErr)
+	Listener, err := net.Listen("tcp", server.SVR_Addr+":"+server.SVR_Port)
 	if err != nil {
-		SERVER.PErr.Panic("Failed to open server (Err code : %s ", err)
+		server.PErr.Panic("Failed to open server (Err code : %s ", err)
 	} else {
-		SERVER.Pinfo.Println("Relay server initiated " + SVR_ADDR + ":" + SVR_PORT)
+		server.Pinfo.Println("Relay server initiated " + address + ":" + port)
 	}
 
 	defer func() {
 		if err := Listener.Close(); err != nil {
-			SERVER.PErr.Panic("Abnormal termination while closing server")
+			server.PErr.Panic("Abnormal termination while closing server")
 		}
 	}()
 	//TODO: database trash cleaner
@@ -77,11 +54,11 @@ func Start(address string, port string) error {
 
 	for {
 		if connection, err := Listener.Accept(); err != nil {
-			SERVER.PErr.Println("Failed to connect :" + connection.RemoteAddr().String())
+			server.PErr.Println("Failed to connect :" + connection.RemoteAddr().String())
 		} else {
 			//수신 시
 			go func() {
-				SERVER.afterConnected(connection, SERVER.PErr)
+				server.afterConnected(connection, server.PErr)
 			}()
 		}
 
