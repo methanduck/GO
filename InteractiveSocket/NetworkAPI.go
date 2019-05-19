@@ -371,7 +371,9 @@ func (win *Window) Start(address string, port string) error {
 		return err
 	} else {
 		win.PInfo.Println("Socket server initialized = " + address + ":" + port)
+		win.PInfo.Println("#############################Currently configured data################################")
 		win.svrInfo.PrintData()
+		win.PInfo.Println("######################################################################################")
 	}
 
 	defer func() {

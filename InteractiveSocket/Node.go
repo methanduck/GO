@@ -132,6 +132,7 @@ func (node *Node) FILE_INITIALIZE() error {
 		}()
 		node.DATA_INITIALIZER(Node{}, false)
 	} else {
+		node.SetIdentity()
 		if err := node.FILE_LOAD(); err != nil {
 			return err
 		}
