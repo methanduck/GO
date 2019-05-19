@@ -75,9 +75,11 @@ func (win *Window) afterConnected(Android net.Conn) {
 
 		//패스워드 없이 초기 창문확인을 위한 명령이 들어올때 수행합니다.
 		if recvData.PassWord == "" {
-			win.PInfo.Println("Operate without initialize (Android :" + Android.RemoteAddr().String() + ")")
-			result := win.Operation(recvData)
-			_ = COMM_SENDJSON(&result, Android)
+			if recvData.Oper != "" {
+				win.PInfo.Println("Operate without initialize (Android :" + Android.RemoteAddr().String() + ")")
+				result := win.Operation(recvData)
+				_ = COMM_SENDJSON(&result, Android)
+			}
 		} else {
 			//패스워드가 제공되면서 창문 명령이 전달될 경우를 처리합니다.
 			//수신된 비밀번호를 설정하되 다중 입력이 들어올 경우 race condition이 발생하므로
@@ -99,6 +101,7 @@ func (win *Window) afterConnected(Android net.Conn) {
 					win.PErr.Println(err)
 				}
 				win.FAvailable.Unlock()
+				win.svrInfo.PrintData()
 				if recvData.Oper != "" {
 					result := win.Operation(recvData)
 					_ = COMM_SENDJSON(&result, Android)
