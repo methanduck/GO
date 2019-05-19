@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/color"
-	"golang.org/x/crypto/ocsp"
 	"io"
 	"log"
 	"net"
