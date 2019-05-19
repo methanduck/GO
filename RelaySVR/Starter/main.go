@@ -19,14 +19,15 @@ func main() {
 	port := os.Getenv("serverport")
 
 	if address == "" {
-		addr, err := exec.Command("/bash/sh", "-c", "awk 'END{print $1}' /etc/hosts").Output()
+		addr, err := exec.Command("/bin/sh", "-c", "awk 'END{print $1}' /etc/hosts").Output()
 		if err != nil {
 			red := color.New(color.FgRed).SprintFunc()
 			log.Println(red("ERROR!! Relay server failed to get address or port!!"))
 			log.Panic(red("Aborting initialize" + err.Error()))
 
 		}
-		if err := run(string(addr), port); err != nil {
+		addrModified := addr[:len(addr)-1]
+		if err := run(string(addrModified), port); err != nil {
 			red := color.New(color.FgRed).SprintFunc()
 			log.Panic(red("Stop running" + err.Error()))
 		}

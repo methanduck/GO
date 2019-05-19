@@ -35,12 +35,15 @@ func main() {
 			log.Println("ERROR!! Socket server failed to get address or port!!")
 			log.Panic("Aborting initialize" + err.Error())
 		}
-		run(string(addr), port)
+		addrModified := addr[:len(addr)-1]
+		if err := run(string(addrModified), port); err != nil {
+			red := color.New(color.FgRed).SprintFunc()
+			log.Panic(red("Stop running" + err.Error()))
+		}
 	}
 
 }
 func run(address string, port string) error {
 	localServer := InteractiveSocket.Window{}
-	localServer.Start(address, port)
-	return nil
+	return localServer.Start(address, port)
 }
