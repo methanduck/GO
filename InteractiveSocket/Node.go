@@ -84,6 +84,7 @@ func (node *Node) SetIdentity() {
 	}
 }
 
+//파일에 존재하는 설정값을 load함
 func (node *Node) FILE_LOAD() error {
 	fileInfo, err := os.Stat(FILENAME)
 	if err != nil {
@@ -103,6 +104,7 @@ func (node *Node) FILE_LOAD() error {
 	return nil
 }
 
+//현재 설정값을 파일로 flushing함
 func (node *Node) FILE_FLUSH() error {
 	byted, _ := json.Marshal(node)
 	if file, err := os.OpenFile(FILENAME, os.O_RDWR|os.O_TRUNC, os.FileMode(0644)); err != nil {
@@ -118,6 +120,7 @@ func (node *Node) FILE_FLUSH() error {
 	return nil
 }
 
+//파일형태의 설정값이 없으면 새로 생성하고 있으면 불러옴
 func (node *Node) FILE_INITIALIZE() error {
 	if _, err := os.Stat(FILENAME); err != nil {
 		file, err := os.OpenFile(FILENAME, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.FileMode(0644))
@@ -234,4 +237,8 @@ func (node *Node) GetMacAddr() (addr string) {
 		}
 	}
 	return
+}
+
+func (node *Node) PrintData() {
+	fmt.Println(json.Marshal(node))
 }
