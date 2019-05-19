@@ -1,9 +1,7 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"os/exec"
+	"os"
 	"runtime"
 )
 import (
@@ -12,6 +10,7 @@ import (
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
+	/* change flag to os.Getenv
 	addr, _ := exec.Command("sh", "-c", "awk 'END{print $1}' /etc/hosts").Output()
 	if string(addr) == "" {
 		addr = []byte("127.0.0.1")
@@ -19,8 +18,9 @@ func main() {
 	address := flag.String("addr", string(addr), "Set listening address")
 	port := flag.String("port", InteractiveSocket.SVRLISTENINGPORT, "Set listening port")
 	flag.Parse()
-
-	fmt.Println(*address + *port)
+	*/
+	address := os.Getenv("windowaddr")
+	port := os.Getenv("windowprt")
 	localServer := InteractiveSocket.Window{}
-	localServer.Start(*address, *port)
+	localServer.Start(address, port)
 }
