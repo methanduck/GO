@@ -28,7 +28,7 @@ func main() {
 	port := os.Getenv("windowport")
 
 	if address == "" {
-		addr, err := exec.Command("/bash/sh", "-c", "awk 'END{print $1}' /etc/hosts").Output()
+		addr, err := exec.Command("/bin/sh", "-c", "awk 'END{print $1}' /etc/hosts").Output()
 		if err != nil {
 			color.Set(color.FgRed)
 			defer color.Unset()
