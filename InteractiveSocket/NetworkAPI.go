@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/color"
+	"golang.org/x/crypto/ocsp"
 	"io"
 	"log"
 	"net"
@@ -102,6 +103,7 @@ func (win *Window) afterConnected(Android net.Conn) {
 				}
 				win.FAvailable.Unlock()
 				win.svrInfo.PrintData()
+				_ = COMM_SENDJSON(&Node{Ack: COMM_SUCCESS}, Android)
 				if recvData.Oper != "" {
 					result := win.Operation(recvData)
 					_ = COMM_SENDJSON(&result, Android)

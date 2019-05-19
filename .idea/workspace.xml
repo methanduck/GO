@@ -17,8 +17,8 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/InteractiveSocket/Node.go">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="591">
-                  <caret line="216" column="29" selection-start-line="216" selection-start-column="29" selection-end-line="216" selection-end-column="29" />
+                <state relative-caret-position="90">
+                  <caret line="15" column="4" selection-start-line="15" selection-start-column="4" selection-end-line="15" selection-end-column="4" />
                   <folding>
                     <element signature="n#!!block;n#FILE_LOAD#0" />
                     <element signature="n#!!block;n#FILE_FLUSH#0" />
@@ -57,11 +57,10 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="556">
-                  <caret line="76" column="36" lean-forward="true" selection-start-line="76" selection-start-column="36" selection-end-line="76" selection-end-column="36" />
+                <state relative-caret-position="36">
+                  <caret line="59" column="18" selection-start-line="59" selection-start-column="18" selection-end-line="59" selection-end-column="18" />
                   <folding>
                     <element signature="e#27#173#0" expanded="true" />
-                    <element signature="e#3729#6306#0" />
                   </folding>
                 </state>
               </provider>
@@ -130,16 +129,16 @@
         <option value="$PROJECT_DIR$/InteractiveSocket/Starter/main.go" />
         <option value="$PROJECT_DIR$/RelaySVR/Starter/main.go" />
         <option value="$PROJECT_DIR$/RelaySVR/State.go" />
-        <option value="$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go" />
         <option value="$PROJECT_DIR$/RelaySVR/RelaySVR.go" />
         <option value="$PROJECT_DIR$/InteractiveSocket/Node.go" />
+        <option value="$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="1416" />
-    <option name="y" value="99" />
-    <option name="width" value="1734" />
+  <component name="ProjectFrameBounds">
+    <option name="x" value="1218" />
+    <option name="y" value="153" />
+    <option name="width" value="2052" />
     <option name="height" value="1407" />
   </component>
   <component name="ProjectView">
@@ -243,10 +242,10 @@
     </recent_temporary>
   </component>
   <component name="ToolWindowManager">
-    <frame x="1202" y="148" width="1734" height="1407" extended-state="0" />
+    <frame x="1600" y="369" width="1734" height="1407" extended-state="0" />
     <editor active="true" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.11743772" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.11743772" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
@@ -261,7 +260,7 @@
       <window_info anchor="bottom" id="Version Control" order="9" weight="0.13244514" />
       <window_info anchor="bottom" id="Terminal" order="10" />
       <window_info anchor="bottom" id="Event Log" order="11" side_tool="true" />
-      <window_info anchor="bottom" id="Messages" order="12" visible="true" weight="0.15433072" />
+      <window_info active="true" anchor="bottom" id="Messages" order="12" visible="true" weight="0.15433072" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -344,8 +343,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/InteractiveSocket/Node.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="591">
-          <caret line="216" column="29" selection-start-line="216" selection-start-column="29" selection-end-line="216" selection-end-column="29" />
+        <state relative-caret-position="90">
+          <caret line="15" column="4" selection-start-line="15" selection-start-column="4" selection-end-line="15" selection-end-column="4" />
           <folding>
             <element signature="n#!!block;n#FILE_LOAD#0" />
             <element signature="n#!!block;n#FILE_FLUSH#0" />
@@ -355,11 +354,10 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="556">
-          <caret line="76" column="36" lean-forward="true" selection-start-line="76" selection-start-column="36" selection-end-line="76" selection-end-column="36" />
+        <state relative-caret-position="36">
+          <caret line="59" column="18" selection-start-line="59" selection-start-column="18" selection-end-line="59" selection-end-column="18" />
           <folding>
             <element signature="e#27#173#0" expanded="true" />
-            <element signature="e#3729#6306#0" />
           </folding>
         </state>
       </provider>
