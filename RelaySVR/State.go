@@ -149,6 +149,21 @@ func (db dbData) GetNodeData(identity string) (node NodeState, err error) {
 	return
 }
 
+func (db dbData) PutNodeData(key string, val NodeState) error {
+	err := db.database.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(BUCKET_NODE))
+		marshaledVal, _ := json.Marshal(val)
+		if err := bucket.Put([]byte(key), marshaledVal); err != nil {
+			return errors.New("BOLT : Failed to put data")
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 //Update the Node "State" as Online
 func (db dbData) UpdataOnline(data InteractiveSocket.Node) error {
 	var val []byte
@@ -179,6 +194,7 @@ func (db dbData) UpdataOnline(data InteractiveSocket.Node) error {
 			}
 			//Modify state
 			temp_NodeState.IsOnline = true
+			temp_NodeState.lastLogin = time.Now()
 			//marshalling
 			val, err := json.Marshal(&temp_NodeState)
 			if err != nil {
@@ -292,6 +308,30 @@ func (db dbData) ResetState(identity string, isonline bool, isreqConn bool, lock
 			if err := bucket.Put([]byte(identity), val); err != nil {
 				return errors.New("BOLT : Put failed")
 			}
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db dbData) Walk() error {
+	if err := db.database.View(func(tx *bolt.Tx) error {
+		var unMarshalledVal NodeState
+		bucket := tx.Bucket([]byte(BUCKET_NODE))
+		cur := bucket.Cursor()
+		_, val := cur.First()
+		for val != nil {
+			json.Unmarshal(val, unMarshalledVal)
+			diff := time.Now().Sub(unMarshalledVal.lastLogin)
+			if isActive := int(diff.Minutes()); isActive > 3 {
+				unMarshalledVal.IsOnline = false
+				if err := db.PutNodeData(unMarshalledVal.Identity, unMarshalledVal); err != nil {
+					return err
+				}
+			}
+			_, val = cur.Next()
 		}
 		return nil
 	}); err != nil {
