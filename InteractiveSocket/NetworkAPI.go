@@ -1,11 +1,9 @@
 package InteractiveSocket
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/fatih/color"
-	"io"
 	"log"
 	"net"
 	"os"
@@ -49,7 +47,7 @@ func (win *Window) afterConnected(Android net.Conn) {
 	switch win.svrInfo.Initialized {
 	//초기화가 되어 있는 경우
 	case true:
-		_ = COMM_SENDJSON(&Node{Ack: "Authentication Require"}, Android)
+		_ = COMM_SENDJSON(*win, Android)
 		//데이터 수신
 		recvData, err := COMM_RECVJSON(Android)
 		if err != nil {
@@ -58,12 +56,11 @@ func (win *Window) afterConnected(Android net.Conn) {
 		//자격증명 수행
 		if err := win.svrInfo.HashValidation(recvData.PassWord, MODE_VALIDATION); err != nil {
 			win.PErr.Println("Login failed (Android :" + Android.RemoteAddr().String() + ")")
-			_ = COMM_SENDJSON(&Node{Ack: "FAIL"}, Android)
+			win.COMM_ACK(COMM_FAIL, Android)
 		} else {
 			win.PInfo.Println("Login succeeded (Android :" + Android.RemoteAddr().String() + ")")
 			//자격증명 성공시 명령 수행
-			result := win.Operation(recvData)
-			_ = COMM_SENDJSON(&result, Android)
+			win.Operation(recvData, Android)
 		}
 
 	//초기화가 되어 있지 않는 경우
@@ -78,8 +75,7 @@ func (win *Window) afterConnected(Android net.Conn) {
 		if recvData.PassWord == "" {
 			if recvData.Oper != "" {
 				win.PInfo.Println("Operate without initialize (Android :" + Android.RemoteAddr().String() + ")")
-				result := win.Operation(recvData)
-				_ = COMM_SENDJSON(&result, Android)
+				win.Operation(recvData, Android)
 			}
 		} else {
 			//패스워드가 제공되면서 창문 명령이 전달될 경우를 처리합니다.
@@ -92,7 +88,7 @@ func (win *Window) afterConnected(Android net.Conn) {
 			//		+ app입장에서는 연결이 종료되고 다시 창문에 접근해야함(자격증명)
 			if win.svrInfo.Initialized {
 				win.PErr.Println(color.RedString("Initialize failure (Android :" + Android.RemoteAddr().String() + ")"))
-				_ = COMM_SENDJSON(&Node{Ack: "FAIL"}, Android)
+				win.COMM_ACK(COMM_FAIL, Android)
 				return
 			} else {
 				win.PInfo.Println(color.GreenString("Commencing data flush (from Android :" + Android.RemoteAddr().String() + ")"))
@@ -103,10 +99,9 @@ func (win *Window) afterConnected(Android net.Conn) {
 				}
 				win.FAvailable.Unlock()
 				win.svrInfo.PrintData()
-				_ = COMM_SENDJSON(&Node{Ack: COMM_SUCCESS}, Android)
+				win.COMM_ACK(COMM_SUCCESS, Android)
 				if recvData.Oper != "" {
-					result := win.Operation(recvData)
-					_ = COMM_SENDJSON(&result, Android)
+					win.Operation(recvData, Android)
 				}
 			}
 		}
@@ -138,7 +133,7 @@ func (win *Window) updateToRelaySVR() {
 				_ = COMM_SENDJSON(&Node{Oper: STATE_ONLINE}, conn)
 				inNode, err := COMM_RECVJSON(conn)
 				if err == nil {
-					win.RelayOperation(inNode)
+					win.RelayOperation(inNode, conn)
 				}
 			}
 		}
@@ -151,12 +146,12 @@ func (win *Window) close_UpdateToRerlaySVR() {
 	win.quitSIGNAL <- "stop"
 }
 
-func (win *Window) RelayOperation(reqNode Node) {
+func (win *Window) RelayOperation(reqNode Node, remote net.Conn) {
 	switch reqNode.Ack {
 	case COMM_SUCCESS:
 		win.PInfo.Println(color.GreenString("Successfully update online to relay server"))
 	default:
-		_ = win.Operation(reqNode)
+		win.Operation(reqNode, remote)
 	}
 }
 
@@ -166,27 +161,26 @@ func (win *Window) SocketOperation(Android net.Conn) {
 		if err != nil {
 			break
 		}
-		result := win.Operation(AndroidNode)
-		_ = COMM_SENDJSON(&result, Android)
+		win.Operation(AndroidNode, Android)
 	}
 
 }
 
 //창문 명령
-func (win *Window) Operation(order Node) Node {
+func (win *Window) Operation(order Node, android net.Conn) {
 	win.Available.Lock()
 	switch order.Oper {
 	case OPERATION_OPEN:
 
 		win.PInfo.Println("executed command : OPEN")
-		return Node{Ack: COMM_SUCCESS}
+		win.COMM_ACK(COMM_SUCCESS, android)
 	case OPERATION_CLOSE:
 		win.PInfo.Println("Socet server executed command : CLOSE")
-		return Node{Ack: COMM_SUCCESS}
+		win.COMM_ACK(COMM_SUCCESS, android)
 	case OPERATION_INFORMATION:
 		//TODO : 센서값 모두 파싱
 		win.PInfo.Println("executed command : INFO")
-		return Node{}
+		win.COMM_ACK(COMM_SUCCESS, android)
 	case OPERATION_MODEAUTO:
 		win.svrInfo.ModeAuto = order.ModeAuto
 		if win.svrInfo.ModeAuto {
@@ -194,7 +188,7 @@ func (win *Window) Operation(order Node) Node {
 		} else {
 			win.PInfo.Println("executed command : WINDOW_MODE_AUTO=FALSE")
 		}
-		return Node{Ack: COMM_SUCCESS}
+		win.COMM_ACK(COMM_SUCCESS, android)
 	case OPERATION_PROXY:
 		win.svrInfo.ModeProxy = order.ModeProxy
 		if win.svrInfo.ModeProxy {
@@ -202,42 +196,25 @@ func (win *Window) Operation(order Node) Node {
 		} else {
 			win.close_UpdateToRerlaySVR()
 		}
-		return Node{Ack: COMM_SUCCESS}
+		win.COMM_ACK(COMM_SUCCESS, android)
 	default:
 		win.PErr.Println("received not compatible command (OPER)")
+		win.COMM_ACK(COMM_FAIL, android)
 	}
 	win.Available.Unlock()
-	return Node{Ack: COMM_FAIL}
+
 }
 
-//TCP 메시지 전송
-func COMM_SENDMSG(msg string, Android net.Conn) error {
-	_, err := Android.Write([]byte(msg))
-	if err != nil {
-		return fmt.Errorf("SocketSVR failed to send message")
-	}
-	return nil
-}
-
-//TCP 메시지 수신
-func COMM_RECVMSG(android net.Conn) (string, error) {
-	inStream := make([]byte, 4096)
-	var err error
-	_, err = android.Read(inStream)
-	if len(inStream) == 0 {
-		return "", fmt.Errorf("COMM_SVR : SocketSVR received empty message")
-	}
-	if err == io.EOF {
-		return "EOF", nil
-	}
-
-	n := bytes.IndexByte(inStream, 0)
-	return string(inStream[:n]), nil
+//응답 송신
+func (win *Window) COMM_ACK(result string, android net.Conn) {
+	win.svrInfo.Ack = result
+	res, _ := json.Marshal(win.svrInfo)
+	_, _ = android.Write(res)
 }
 
 //JSON파일 전송
-func COMM_SENDJSON(windowData *Node, android net.Conn) error {
-	marshalledData, err := json.Marshal(windowData)
+func COMM_SENDJSON(data interface{}, android net.Conn) error {
+	marshalledData, err := json.Marshal(data)
 	if err != nil {
 		return fmt.Errorf("COMM_SVR : SocketSVR Marshalled failed")
 	}
@@ -282,7 +259,7 @@ func (win *Window) Start(address string, port string) error {
 	if err := win.svrInfo.FILE_INITIALIZE(); err != nil {
 		win.PErr.Println(err)
 	} else {
-		win.PInfo.Println("File loaded")
+		win.PInfo.Println(color.BlueString("[OK] File loaded"))
 	}
 	//서버 리스닝 시작부
 	Android, err := net.Listen("tcp", address+":"+port)
@@ -290,7 +267,7 @@ func (win *Window) Start(address string, port string) error {
 		win.PErr.Println("failed to open socket")
 		return err
 	} else {
-		win.PInfo.Println("initialized = " + address + ":" + port)
+		win.PInfo.Println(color.BlueString("[OK] initialized = " + address + ":" + port))
 		win.PInfo.Println("#############################Currently configured data################################")
 		win.svrInfo.PrintData()
 		win.PInfo.Println("######################################################################################")
