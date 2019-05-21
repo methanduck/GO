@@ -65,7 +65,7 @@ func (win *Window) afterConnected(Android net.Conn) {
 
 	//초기화가 되어 있지 않는 경우
 	case false:
-		_ = COMM_SENDJSON(&Node{Ack: "스마트 창문을 이용해주셔서 감사합니다. 창문 초기화를 위한 설정을 진행해 주시기 바랍니다."}, Android)
+		win.COMM_ACK("Configuration require", Android)
 		recvData, err := COMM_RECVJSON(Android)
 		if err != nil {
 			win.PErr.Println(color.RedString("Failed to receive json"))
