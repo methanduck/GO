@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -113,6 +114,7 @@ func (win *Window) afterConnected(Android net.Conn) {
 
 	win.PInfo.Println("Connection terminated with :" + Android.RemoteAddr().String())
 	_ = Android.Close()
+	runtime.GC()
 }
 
 func (win *Window) updateToRelaySVR() {

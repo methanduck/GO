@@ -97,6 +97,9 @@ func (node *Node) FILE_LOAD() error {
 		if _, err := file.Read(data); err != nil {
 			return errors.New("File read fail")
 		}
+		if fileInfo.Size() == 0 {
+			return errors.New("File size is 0")
+		}
 		var tmpNode Node
 		_ = json.Unmarshal(data, tmpNode)
 		node.DATA_INITIALIZER(tmpNode, true)
