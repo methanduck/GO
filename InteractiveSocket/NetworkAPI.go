@@ -28,6 +28,7 @@ type Window struct {
 	Available  *sync.Mutex
 	FAvailable *sync.Mutex
 	quitSIGNAL chan string
+	path       string
 }
 
 //VALIDATION 성공 : "LOGEDIN" 실패 : "ERR"
@@ -247,9 +248,10 @@ func (win *Window) EXEC_COMMAND(comm string) string {
 }
 
 //프로그램 시작부
-func (win *Window) Start(address string, port string) error {
+func (win *Window) Start(address string, port string, path string) error {
 	//구조체 객체 선언
 	win.svrInfo = &Node{}
+	win.path = path
 	win.PErr = log.New(os.Stdout, color.RedString("ERR :: Socket server: "), log.LstdFlags)
 	win.PInfo = log.New(os.Stdout, "INFO :: Socket server :", log.LstdFlags)
 	win.Available = new(sync.Mutex)

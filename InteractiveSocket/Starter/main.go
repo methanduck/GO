@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"github.com/fatih/color"
 	"log"
 	"os"
@@ -13,8 +14,19 @@ import (
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	address := os.Getenv("windowaddr")
-	port := os.Getenv("windowport")
+	address := os.Getenv("address")
+	port := os.Getenv("port")
+	if port != "" {
+		port = *flag.String("port", "6866", "set window port")
+	}
+	path := os.Getenv("pythonpath")
+	if path != "" {
+		currentDir, err := os.Getwd()
+		if err != nil {
+			log.Println(color.RedString("ERR :: Socket server : failed to get current dir"))
+		}
+		path = *flag.String("pythonpath", currentDir, "set python file dir")
+	}
 
 	if address == "" {
 		addr, err := exec.Command("/bin/sh", "-c", "awk 'END{print $1}' /etc/hosts").Output()
@@ -25,14 +37,14 @@ func main() {
 			log.Panic("Aborting initialize" + err.Error())
 		}
 		addrModified := addr[:len(addr)-1]
-		if err := run(string(addrModified), port); err != nil {
+		if err := run(string(addrModified), port, path); err != nil {
 			red := color.New(color.FgRed).SprintFunc()
 			log.Panic(red("Stop running" + err.Error()))
 		}
 	}
 
 }
-func run(address string, port string) error {
+func run(address string, port string, path string) error {
 	localServer := InteractiveSocket.Window{}
-	return localServer.Start(address, port)
+	return localServer.Start(address, port, path)
 }
