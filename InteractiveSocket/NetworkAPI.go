@@ -19,6 +19,7 @@ const (
 	SVRLISTENINGPORT = "6866"
 	//중계서버 IP
 	RELAYSVRIPADDR = "127.0.0.1:6866"
+	PYTHONFILENAME = "motor_gyoo"
 )
 
 type Window struct {
@@ -172,11 +173,11 @@ func (win *Window) Operation(order Node, android net.Conn) {
 	win.Available.Lock()
 	switch order.Oper {
 	case OPERATION_OPEN:
-		_, _ = exec.Command("/bin/sh", "-c", win.path+"/").Output()
+		_, _ = exec.Command("/bin/sh", "-c", win.path+PYTHONFILENAME+" ccw 5").Output()
 		win.PInfo.Println("executed command : OPEN")
 		win.COMM_ACK(COMM_SUCCESS, android)
 	case OPERATION_CLOSE:
-		_, _ = exec.Command("/bin/sh", "-c", win.path+"/").Output()
+		_, _ = exec.Command("/bin/sh", "-c", win.path+PYTHONFILENAME+" cw 5").Output()
 		win.PInfo.Println("Socet server executed command : CLOSE")
 		win.COMM_ACK(COMM_SUCCESS, android)
 	case OPERATION_INFORMATION:

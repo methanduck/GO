@@ -5,7 +5,6 @@ import (
 	"github.com/fatih/color"
 	"log"
 	"os/exec"
-
 	//	"flag"
 	//	"github.com/fatih/color"
 	//	"log"
@@ -50,7 +49,8 @@ func main() {
 		}
 	}
 	flag.Parse()
-	_ = run(*address, *port, *path)
+
+	_ = run(*address, *port, "python "+*path)
 
 }
 func run(address string, port string, path string) error {
