@@ -2,8 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="cd7fa305-8b38-4b09-861e-84e8b5ad9d59" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/InteractiveSocket/Starter/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/InteractiveSocket/Starter/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go" beforeDir="false" afterPath="$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -12,14 +11,14 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="FileEditorManager">
-    <splitter split-orientation="horizontal" split-proportion="0.7257182">
+    <splitter split-orientation="horizontal" split-proportion="0.4651382">
       <split-first>
         <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/InteractiveSocket/Starter/main.go">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="437">
-                  <caret line="51" column="16" selection-start-line="51" selection-start-column="16" selection-end-line="51" selection-end-column="16" />
+                <state relative-caret-position="383">
+                  <caret line="41" column="80" lean-forward="true" selection-start-line="41" selection-start-column="80" selection-end-line="41" selection-end-column="80" />
                 </state>
               </provider>
             </entry>
@@ -58,8 +57,8 @@
           <file pinned="false" current-in-tab="true">
             <entry file="file://$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go">
               <provider selected="true" editor-type-id="text-editor">
-                <state relative-caret-position="725">
-                  <caret line="252" column="25" lean-forward="true" selection-start-line="252" selection-start-column="25" selection-end-line="252" selection-end-column="25" />
+                <state relative-caret-position="570">
+                  <caret line="268" column="86" selection-start-line="268" selection-start-column="86" selection-end-line="268" selection-end-column="86" />
                   <folding>
                     <element signature="n#!!block;n#afterConnected#0" />
                     <element signature="n#!!block;n#updateToRelaySVR#0" />
@@ -122,17 +121,16 @@
         <option value="$PROJECT_DIR$/RelaySVR/State.go" />
         <option value="$PROJECT_DIR$/RelaySVR/RelaySVR.go" />
         <option value="$PROJECT_DIR$/InteractiveSocket/Node.go" />
-        <option value="$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go" />
         <option value="$PROJECT_DIR$/RelaySVR/Starter/main.go" />
         <option value="$PROJECT_DIR$/InteractiveSocket/Starter/main.go" />
+        <option value="$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="1768" />
-    <option name="y" value="145" />
+    <option name="x" value="1713" />
     <option name="width" value="1734" />
-    <option name="height" value="1100" />
+    <option name="height" value="1407" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
@@ -250,15 +248,14 @@
     </recent_temporary>
   </component>
   <component name="ToolWindowManager">
-    <frame x="752" y="146" width="1734" height="1100" extended-state="0" />
-    <editor active="true" />
+    <frame x="-8" y="-8" width="3456" height="1416" extended-state="6" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.12664278" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.062426385" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.10501567" />
-      <window_info anchor="bottom" id="Run" order="2" visible="true" weight="0.4037267" />
+      <window_info anchor="bottom" id="Run" order="2" visible="true" weight="0.30421218" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.2154233" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -378,10 +375,17 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/InteractiveSocket/Starter/main.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="383">
+          <caret line="41" column="80" lean-forward="true" selection-start-line="41" selection-start-column="80" selection-end-line="41" selection-end-column="80" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/InteractiveSocket/NetworkAPI.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="725">
-          <caret line="252" column="25" lean-forward="true" selection-start-line="252" selection-start-column="25" selection-end-line="252" selection-end-column="25" />
+        <state relative-caret-position="570">
+          <caret line="268" column="86" selection-start-line="268" selection-start-column="86" selection-end-line="268" selection-end-column="86" />
           <folding>
             <element signature="n#!!block;n#afterConnected#0" />
             <element signature="n#!!block;n#updateToRelaySVR#0" />
@@ -394,13 +398,6 @@
             <element signature="n#!!block;n#COMM_RECVJSON#0" />
             <element signature="n#!!block;n#EXEC_COMMAND#0" />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/InteractiveSocket/Starter/main.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="437">
-          <caret line="51" column="16" selection-start-line="51" selection-start-column="16" selection-end-line="51" selection-end-column="16" />
         </state>
       </provider>
     </entry>

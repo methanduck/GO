@@ -21,20 +21,21 @@ import (
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	address := *flag.String("address", "127.0.0.1", "set window address")
-	port := *flag.String("port", "6866", "set window port")
-	path := *flag.String("pythonpath", "./", "set python command path")
-	if port == "" {
-		port = os.Getenv("port")
+	address := flag.String("address", "127.0.0.1", "set window address")
+	port := flag.String("port", "6866", "set window port")
+	path := flag.String("pythonpath", "./", "set python command path")
+	flag.Parse()
+	if *port == "" {
+		*port = os.Getenv("port")
 	}
-	if address == "" {
-		address = os.Getenv("address")
+	if *address == "" {
+		*address = os.Getenv("address")
 	}
-	if path == "" {
-		path = os.Getenv("pythonpath")
+	if *path == "" {
+		*path = os.Getenv("pythonpath")
 	}
 
-	if address == "" {
+	if *address == "" {
 		addr, err := exec.Command("/bin/sh", "-c", "awk 'END{print $1}' /etc/hosts").Output()
 		if err != nil {
 			color.Set(color.FgRed)
@@ -43,13 +44,13 @@ func main() {
 			log.Panic("Aborting initialize" + err.Error())
 		}
 		addrModified := addr[:len(addr)-1]
-		if err := run(string(addrModified), port, path); err != nil {
+		if err := run(string(addrModified), *port, *path); err != nil {
 			red := color.New(color.FgRed).SprintFunc()
 			log.Panic(red("Stop running" + err.Error()))
 		}
 	}
 	flag.Parse()
-	_ = run(address, port, path)
+	_ = run(*address, *port, *path)
 
 }
 func run(address string, port string, path string) error {
