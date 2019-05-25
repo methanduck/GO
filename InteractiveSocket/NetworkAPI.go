@@ -266,7 +266,7 @@ func (win *Window) Start(address string, port string, path string) error {
 	//서버 리스닝 시작부
 	Android, err := net.Listen("tcp", address+":"+port)
 	if err != nil {
-		win.PErr.Println("failed to open socket")
+		win.PErr.Println("failed to open socket ( address :" + address + " port :" + port + ")")
 		return err
 	} else {
 		win.PInfo.Println(color.BlueString("[OK] initialized = " + address + ":" + port))
