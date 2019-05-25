@@ -253,6 +253,14 @@ func (win *Window) EXEC_COMMAND(comm string) string {
 	return string(out)
 }
 
+//센서 데이터 해석
+//TODO 해석기 작성
+func (win *Window) Interpreter(data string) error {
+	//result := strings.Split(data,DELIMITER)
+	//win.svrInfo.Light = result[0]
+	return nil
+}
+
 //프로그램 시작부
 func (win *Window) Start(address string, port string, path string) error {
 	//구조체 객체 선언
