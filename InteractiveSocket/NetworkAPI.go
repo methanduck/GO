@@ -172,13 +172,18 @@ func (win *Window) Operation(order Node, android net.Conn) {
 	win.Available.Lock()
 	switch order.Oper {
 	case OPERATION_OPEN:
-
+		_, _ = exec.Command("/bin/sh", "-c", win.path+"/").Output()
 		win.PInfo.Println("executed command : OPEN")
 		win.COMM_ACK(COMM_SUCCESS, android)
 	case OPERATION_CLOSE:
+		_, _ = exec.Command("/bin/sh", "-c", win.path+"/").Output()
 		win.PInfo.Println("Socet server executed command : CLOSE")
 		win.COMM_ACK(COMM_SUCCESS, android)
 	case OPERATION_INFORMATION:
+		_, err := exec.Command("/bin/sh", "-c", win.path+"/").Output()
+		if err != nil {
+			win.PErr.Println(err.Error() + "ERR func operation information")
+		}
 		//TODO : 센서값 모두 파싱
 		win.PInfo.Println("executed command : INFO")
 		win.COMM_ACK(COMM_SUCCESS, android)
