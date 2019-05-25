@@ -4,8 +4,14 @@ import (
 	"flag"
 	"github.com/fatih/color"
 	"log"
-	"os"
 	"os/exec"
+
+	//	"flag"
+	//	"github.com/fatih/color"
+	//	"log"
+	//	"os"
+	//	"os/exec"
+	"os"
 	"runtime"
 )
 import (
@@ -14,20 +20,21 @@ import (
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	address := os.Getenv("address")
-	port := os.Getenv("port")
-	if port != "" {
-		port = *flag.String("port", "6866", "set window port")
-	}
-	path := os.Getenv("pythonpath")
-	if path != "" {
-		currentDir, err := os.Getwd()
-		if err != nil {
-			log.Println(color.RedString("ERR :: Socket server : failed to get current dir"))
-		}
-		path = *flag.String("pythonpath", currentDir, "set python file dir")
-	}
 
+	port := *flag.String("port", "6866", "set window port")
+	if port != "" {
+		port = os.Getenv("port")
+	}
+	address := os.Getenv("address")
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		log.Println(color.RedString("ERR :: Socket server : failed to get current dir"))
+	}
+	path := *flag.String("pythonpath", currentDir, "set python command path")
+	if path == "" {
+		path = os.Getenv("pythonpath")
+	}
 	if address == "" {
 		addr, err := exec.Command("/bin/sh", "-c", "awk 'END{print $1}' /etc/hosts").Output()
 		if err != nil {
@@ -42,6 +49,8 @@ func main() {
 			log.Panic(red("Stop running" + err.Error()))
 		}
 	}
+
+	_ = run(address, port, path)
 
 }
 func run(address string, port string, path string) error {

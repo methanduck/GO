@@ -17,7 +17,6 @@ func main() {
 	*/
 	address := os.Getenv("serverwindow")
 	port := os.Getenv("serverport")
-
 	if address == "" {
 		addr, err := exec.Command("/bin/sh", "-c", "awk 'END{print $1}' /etc/hosts").Output()
 		if err != nil {
