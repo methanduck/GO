@@ -22,7 +22,7 @@ const (
 	COMM_ERR              = "ERR"  // 유효하지 않은 명령이거나 서비스되고 있는 항목이 아닐 경우 ex) 존재하지 않는 동작 명령어 수신 시
 	COMM_FAIL             = "FAIL" // 유효한 명령이었으나 정상적으로 처리되지 않은 경우 ex) 로그인 실패
 	COMM_SUCCESS          = "OK"   // Transaction 성공 시 전송
-	DELIMITER             = ","
+	DELIMITER             = " "
 	FILENAME              = "WindowDATA.txt"
 	MODE_PASSWDCONFIG     = "PASSWDCONFIG"
 	MODE_VALIDATION       = "VALIDATION"
@@ -33,19 +33,25 @@ const (
 )
 
 type Node struct {
-	Which       bool        `json:"which"`       //창문 또는 어플리케이션을 구분 // 창문 : false , 어플리케이션 : true
-	Initialized bool        `json:"Initialized"` //TODO: 바로 인증 전송
-	PassWord    string      //`json:"PassWord"`    //창문 비밀번호
-	IPAddr      string      `json:"IPAddr"`     //TODO: 항목 검토필요
-	Identity    string      `json:"Identity"`   //중복되는 IP에서도 창문을 구별 할 수 있음 , md5로 해싱되어 저장됌
-	ModeAuto    bool        `json:"ModeAuto"`   //자동 모드 설정
-	ModeProxy   bool        `json:"mode_proxy"` //중계서버 연결 설정
-	Oper        string      `json:"Oper"`       // "OPEN", "CLOSE", "CONF", "INFO"  // 창문 : "INFO", "ONLINE"
-	Ack         interface{} `json:"Ack"`        // "OK", "COMM_SUCCESS", "TRUE", "FAIL", "FALSE", "OFFLINE"
-	Temp        int         `json:"Temp"`       // temperature
-	Humidity    int         `json:"Humidity"`   // Humidity
-	Gas         int         `json:"Gas"`        // Gas
-	Light       int         `json:"Light"`      // Light
+	Which        bool        `json:"which"`       //창문 또는 어플리케이션을 구분 // 창문 : false , 어플리케이션 : true
+	Initialized  bool        `json:"Initialized"` //TODO: 바로 인증 전송
+	PassWord     string      //`json:"PassWord"`    //창문 비밀번호
+	IPAddr       string      `json:"IPAddr"`     //TODO: 항목 검토필요
+	Identity     string      `json:"Identity"`   //중복되는 IP에서도 창문을 구별 할 수 있음 , md5로 해싱되어 저장됌
+	ModeAuto     bool        `json:"ModeAuto"`   //자동 모드 설정
+	ModeProxy    bool        `json:"mode_proxy"` //중계서버 연결 설정
+	Oper         string      `json:"Oper"`       // "OPEN", "CLOSE", "CONF", "INFO"  // 창문 : "INFO", "ONLINE"
+	Ack          interface{} `json:"Ack"`        // "OK", "COMM_SUCCESS", "TRUE", "FAIL", "FALSE", "OFFLINE"
+	Temp_IN      int         `json:"Temp"`       // temperature
+	Temp_OUT     int         `json:"temp_out"`
+	Humidity_IN  int         `json:"humidity_in"` // Humidity
+	Humidity_OUT int         `json:"humidity_out"`
+	Gas          bool        `json:"Gas"` // Gas
+	Smoke        bool        `json:"smoke"`
+	Light        int         `json:"Light"` // Light
+	Rain         bool        `json:"rain"`
+	Motion       bool        `json:"motion"`
+	Dust         int         `json:"dust"`
 }
 
 func (node *Node) Authentication(input *Node) error {
@@ -221,10 +227,16 @@ func (node *Node) DATA_INITIALIZER(inputData Node, mode bool) {
 		node.SetIdentity()
 		node.ModeAuto = false
 		node.Oper = ""
-		node.Temp = 0
-		node.Humidity = 0
-		node.Gas = 0
+		node.Temp_IN = 0
+		node.Temp_OUT = 0
+		node.Humidity_IN = 0
+		node.Humidity_OUT = 0
+		node.Gas = false
 		node.Light = 0
+		node.Motion = false
+		node.Smoke = false
+		node.Rain = false
+		node.Dust = 0
 	}
 
 }

@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -173,18 +175,40 @@ func (win *Window) Operation(order Node, android net.Conn) {
 	win.Available.Lock()
 	switch order.Oper {
 	case OPERATION_OPEN:
-		_, _ = exec.Command("/bin/sh", "-c", win.path+PYTHONFILENAME+" ccw 5").Output()
-		win.PInfo.Println("executed command : OPEN")
-		win.COMM_ACK(COMM_SUCCESS, android)
-	case OPERATION_CLOSE:
-		_, _ = exec.Command("/bin/sh", "-c", win.path+PYTHONFILENAME+" cw 5").Output()
-		win.PInfo.Println("Socet server executed command : CLOSE")
-		win.COMM_ACK(COMM_SUCCESS, android)
-	case OPERATION_INFORMATION:
-		_, err := exec.Command("/bin/sh", "-c", win.path+"/").Output()
-		if err != nil {
-			win.PErr.Println(err.Error() + "ERR func operation information")
+		if _, err := exec.Command("/bin/sh", "-c", win.path+PYTHONFILENAME+" ccw 5").Output(); err != nil {
+			win.PErr.Println("failed to run command : OPEN")
+			win.COMM_ACK(COMM_FAIL, android)
+		} else {
+			win.PInfo.Println("executed command : OPEN")
+			win.COMM_ACK(COMM_SUCCESS, android)
 		}
+
+	case OPERATION_CLOSE:
+		if _, err := exec.Command("/bin/sh", "-c", win.path+PYTHONFILENAME+" cw 5").Output(); err != nil {
+			win.PErr.Println("failed to run command : CLOSE")
+			win.COMM_ACK(COMM_FAIL, android)
+		} else {
+			win.PInfo.Println("executed command : CLOSE")
+			win.COMM_ACK(COMM_SUCCESS, android)
+		}
+
+	case OPERATION_INFORMATION:
+		if data, err := exec.Command("/bin/sh", "-c", win.path+"/").Output(); err != nil {
+			win.PErr.Println("failed to run command : INFO ( check error code below)")
+			win.PErr.Println(err.Error())
+			win.COMM_ACK(COMM_FAIL, android)
+		} else {
+			win.PInfo.Println("executed command : INFO")
+			win.svrInfo.Ack = COMM_SUCCESS
+			if err := win.Interpreter(string(data)); err != nil {
+				win.PErr.Println("failed to unmarshalling data")
+				win.COMM_ACK(COMM_FAIL, android)
+			} else {
+				_ = COMM_SENDJSON(*win.svrInfo, android)
+				win.PInfo.Println("")
+			}
+		}
+
 		//TODO : 센서값 모두 파싱
 		win.PInfo.Println("executed command : INFO")
 		win.COMM_ACK(COMM_SUCCESS, android)
@@ -254,11 +278,19 @@ func (win *Window) EXEC_COMMAND(comm string) string {
 }
 
 //센서 데이터 해석
-//TODO 해석기 작성
-func (win *Window) Interpreter(data string) error {
-	//result := strings.Split(data,DELIMITER)
-	//win.svrInfo.Light = result[0]
-	return nil
+func (win *Window) Interpreter(data string) (err error) {
+	result := strings.Split(data, DELIMITER)
+	win.svrInfo.Smoke, err = strconv.ParseBool(result[0])
+	win.svrInfo.Rain, err = strconv.ParseBool(result[1])
+	win.svrInfo.Light, err = strconv.Atoi(result[2])
+	win.svrInfo.Motion, err = strconv.ParseBool(result[3])
+	win.svrInfo.Humidity_IN, err = strconv.Atoi(result[4])
+	win.svrInfo.Temp_IN, err = strconv.Atoi(result[5])
+	win.svrInfo.Gas, err = strconv.ParseBool(result[6])
+	win.svrInfo.Dust, err = strconv.Atoi(result[7])
+	win.svrInfo.Humidity_OUT, err = strconv.Atoi(result[8])
+	win.svrInfo.Temp_OUT, err = strconv.Atoi(result[9])
+	return
 }
 
 //프로그램 시작부
