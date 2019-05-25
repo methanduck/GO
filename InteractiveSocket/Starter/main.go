@@ -21,20 +21,19 @@ import (
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
+	address := *flag.String("address", "127.0.0.1", "set window address")
 	port := *flag.String("port", "6866", "set window port")
-	if port != "" {
+	path := *flag.String("pythonpath", "./", "set python command path")
+	if port == "" {
 		port = os.Getenv("port")
 	}
-	address := os.Getenv("address")
-
-	currentDir, err := os.Getwd()
-	if err != nil {
-		log.Println(color.RedString("ERR :: Socket server : failed to get current dir"))
+	if address == "" {
+		address = os.Getenv("address")
 	}
-	path := *flag.String("pythonpath", currentDir, "set python command path")
 	if path == "" {
 		path = os.Getenv("pythonpath")
 	}
+
 	if address == "" {
 		addr, err := exec.Command("/bin/sh", "-c", "awk 'END{print $1}' /etc/hosts").Output()
 		if err != nil {
@@ -49,11 +48,12 @@ func main() {
 			log.Panic(red("Stop running" + err.Error()))
 		}
 	}
-
+	flag.Parse()
 	_ = run(address, port, path)
 
 }
 func run(address string, port string, path string) error {
 	localServer := InteractiveSocket.Window{}
-	return localServer.Start(address, port, path)
+	err := localServer.Start(address, port, path)
+	return err
 }
