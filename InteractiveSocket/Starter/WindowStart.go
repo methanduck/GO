@@ -24,14 +24,22 @@ func main() {
 	port := flag.String("port", "6866", "set window port")
 	path := flag.String("pythonpath", "./", "set python command path")
 	flag.Parse()
-	if *port == "" {
-		*port = os.Getenv("port")
+
+	if *port == "127.0.0.1" {
+		if envPort := os.Getenv("port"); envPort != "" {
+			*port = envPort
+		}
 	}
 	if *address == "" {
-		*address = os.Getenv("address")
+		if envAddress := os.Getenv("address"); envAddress != "" {
+			*address = envAddress
+		}
 	}
+
 	if *path == "" {
-		*path = os.Getenv("pythonpath")
+		if envPath := os.Getenv("pythonpath"); envPath != "" {
+			*path = envPath
+		}
 	}
 
 	if *address == "" {
